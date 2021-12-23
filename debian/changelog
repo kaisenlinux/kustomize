@@ -1,0 +1,5 @@
+kustomize (4.4.1-1kaisen) kaisen-packages; urgency=medium
+
+  * First packaging for Kaisen Linux
+
+ -- Kevin Chevreuil - Kaisen <kaisen@kaisenlinux.org>  Thu, 23 Dec 2021 11:34:30 +0100

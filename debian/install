@@ -1,0 +1,2 @@
+debian/bash-completion/kustomize usr/share/bash-completion/completions
+debian/zsh-completion/_kustomize usr/share/zsh/vendor-completions
