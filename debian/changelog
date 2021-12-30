@@ -1,3 +1,9 @@
+kustomize (4.4.1-2kaisen) kaisen-packages; urgency=medium
+
+  * Update rules file
+
+ -- Kevin Chevreuil - Kaisen <kaisen@kaisenlinux.org>  Thu, 30 Dec 2021 20:57:46 +0100
+
 kustomize (4.4.1-1kaisen) kaisen-packages; urgency=medium
 
   * First packaging for Kaisen Linux

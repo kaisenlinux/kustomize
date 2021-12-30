@@ -1,8 +1,5 @@
 #!/usr/bin/make -f
 
-%:
-	dh $@
-
 export GOPATH=$(CURDIR)/obj-x86_64-linux-gnu
 export GOBIN=$(CURDIR)/obj-x86_64-linux-gnu/bin
 export GO111MODULE=on
