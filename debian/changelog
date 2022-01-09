@@ -1,3 +1,9 @@
+kustomize (4.4.1-3kaisen) kaisen-packages; urgency=medium
+
+  * Add homepage link
+
+ -- Kevin Chevreuil - Kaisen <kaisen@kaisenlinux.org>  Sun, 09 Jan 2022 03:04:41 +0100
+
 kustomize (4.4.1-2kaisen) kaisen-packages; urgency=medium
 
   * Update rules file

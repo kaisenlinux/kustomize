@@ -4,7 +4,7 @@ Priority: optional
 Maintainer: Kevin Chevreuil - Kaisen <kaisen@kaisenlinux.org>
 Build-Depends: debhelper-compat (= 13), dh-golang, golang-go
 Standards-Version: 4.6.0
-Homepage: <insert the upstream URL, if relevant>
+Homepage: https://kustomize.io/
 Vcs-Browser: https://gitlab.com/kaisenlinux/packages/kustomize
 Vcs-Git: https://gitlab.com/kaisenlinux/packages/kustomize.git
 XS-Go-Import-Path: github.com/kubernetes-sigs/kustomize
