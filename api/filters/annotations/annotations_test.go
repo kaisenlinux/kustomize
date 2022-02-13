@@ -11,16 +11,20 @@ import (
 	"sigs.k8s.io/kustomize/api/internal/plugins/builtinconfig"
 	filtertest_test "sigs.k8s.io/kustomize/api/testutils/filtertest"
 	"sigs.k8s.io/kustomize/api/types"
+	"sigs.k8s.io/kustomize/kyaml/yaml"
 )
 
 var annosFs = builtinconfig.MakeDefaultConfig().CommonAnnotations
 
 func TestAnnotations_Filter(t *testing.T) {
+	mutationTrackStub := filtertest_test.MutationTrackerStub{}
 	testCases := map[string]struct {
-		input          string
-		expectedOutput string
-		filter         Filter
-		fsslice        types.FsSlice
+		input                string
+		expectedOutput       string
+		filter               Filter
+		fsslice              types.FsSlice
+		setEntryCallback     func(key, value, tag string, node *yaml.RNode)
+		expectedSetEntryArgs []filtertest_test.SetValueArg
 	}{
 		"add": {
 			input: `
@@ -210,15 +214,84 @@ metadata:
 				"b": "b1",
 			}},
 		},
+
+		// test usage of SetEntryCallback
+		"set_entry_callback": {
+			input: `
+apiVersion: example.com/v1
+kind: Foo
+metadata:
+  name: instance
+`,
+			expectedOutput: `
+apiVersion: example.com/v1
+kind: Foo
+metadata:
+  name: instance
+  annotations:
+    a: a1
+    b: b1
+spec:
+  template:
+    metadata:
+      annotations:
+        a: a1
+        b: b1
+`,
+			filter: Filter{
+				Annotations: annoMap{
+					"a": "a1",
+					"b": "b1",
+				},
+			},
+			setEntryCallback: mutationTrackStub.MutationTracker,
+			fsslice: []types.FieldSpec{
+				{
+					Path:               "spec/template/metadata/annotations",
+					CreateIfNotPresent: true,
+				},
+			},
+			expectedSetEntryArgs: []filtertest_test.SetValueArg{
+				{
+					Key:      "a",
+					Value:    "a1",
+					Tag:      "!!str",
+					NodePath: []string{"metadata", "annotations"},
+				},
+				{
+					Key:      "a",
+					Value:    "a1",
+					Tag:      "!!str",
+					NodePath: []string{"spec", "template", "metadata", "annotations"},
+				},
+				{
+					Key:      "b",
+					Value:    "b1",
+					Tag:      "!!str",
+					NodePath: []string{"metadata", "annotations"},
+				},
+				{
+					Key:      "b",
+					Value:    "b1",
+					Tag:      "!!str",
+					NodePath: []string{"spec", "template", "metadata", "annotations"},
+				},
+			},
+		},
 	}
 
 	for tn, tc := range testCases {
+		mutationTrackStub.Reset()
 		t.Run(tn, func(t *testing.T) {
 			filter := tc.filter
+			filter.WithMutationTracker(tc.setEntryCallback)
 			filter.FsSlice = append(annosFs, tc.fsslice...)
 			if !assert.Equal(t,
 				strings.TrimSpace(tc.expectedOutput),
 				strings.TrimSpace(filtertest_test.RunFilter(t, tc.input, filter))) {
+				t.FailNow()
+			}
+			if !assert.Equal(t, tc.expectedSetEntryArgs, mutationTrackStub.SetValueArgs()) {
 				t.FailNow()
 			}
 		})

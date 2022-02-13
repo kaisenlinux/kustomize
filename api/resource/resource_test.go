@@ -14,6 +14,7 @@ import (
 	. "sigs.k8s.io/kustomize/api/resource"
 	"sigs.k8s.io/kustomize/api/types"
 	"sigs.k8s.io/kustomize/kyaml/resid"
+	kyaml "sigs.k8s.io/kustomize/kyaml/yaml"
 )
 
 var factory = provider.NewDefaultDepProvider().GetResourceFactory()
@@ -1377,7 +1378,7 @@ spec:
   numReplicas: 1
 `))
 	assert.NoError(t, err)
-	r.SetGvk(resid.GvkFromString("grp_ver_knd"))
+	r.SetGvk(resid.GvkFromString("knd.ver.grp"))
 	gvk := r.GetGvk()
 	if expected, actual := "grp", gvk.Group; expected != actual {
 		t.Fatalf("expected '%s', got '%s'", expected, actual)
@@ -1400,30 +1401,156 @@ spec:
   numReplicas: 1
 `))
 	assert.NoError(t, err)
-	r.AppendRefBy(resid.FromString("gr1_ver1_knd1|ns1|name1"))
+	r.AppendRefBy(resid.FromString("knd1.ver1.gr1/name1.ns1"))
 	assert.Equal(t, r.RNode.MustString(), `apiVersion: v1
 kind: Deployment
 metadata:
   name: clown
   annotations:
-    internal.config.kubernetes.io/refBy: gr1_ver1_knd1|ns1|name1
+    internal.config.kubernetes.io/refBy: knd1.ver1.gr1/name1.ns1
 spec:
   numReplicas: 1
 `)
-	assert.Equal(t, r.GetRefBy(), []resid.ResId{resid.FromString("gr1_ver1_knd1|ns1|name1")})
+	assert.Equal(t, r.GetRefBy(), []resid.ResId{resid.FromString("knd1.ver1.gr1/name1.ns1")})
 
-	r.AppendRefBy(resid.FromString("gr2_ver2_knd2|ns2|name2"))
+	r.AppendRefBy(resid.FromString("knd2.ver2.gr2/name2.ns2"))
 	assert.Equal(t, r.RNode.MustString(), `apiVersion: v1
 kind: Deployment
 metadata:
   name: clown
   annotations:
-    internal.config.kubernetes.io/refBy: gr1_ver1_knd1|ns1|name1,gr2_ver2_knd2|ns2|name2
+    internal.config.kubernetes.io/refBy: knd1.ver1.gr1/name1.ns1,knd2.ver2.gr2/name2.ns2
 spec:
   numReplicas: 1
 `)
 	assert.Equal(t, r.GetRefBy(), []resid.ResId{
-		resid.FromString("gr1_ver1_knd1|ns1|name1"),
-		resid.FromString("gr2_ver2_knd2|ns2|name2"),
+		resid.FromString("knd1.ver1.gr1/name1.ns1"),
+		resid.FromString("knd2.ver2.gr2/name2.ns2"),
 	})
+}
+
+func TestOrigin(t *testing.T) {
+	r, err := factory.FromBytes([]byte(`
+apiVersion: v1
+kind: Deployment
+metadata:
+  name: clown
+spec:
+  numReplicas: 1
+`))
+	assert.NoError(t, err)
+	origin := &Origin{
+		Path: "deployment.yaml",
+		Repo: "github.com/myrepo",
+		Ref:  "master",
+	}
+	assert.NoError(t, r.SetOrigin(origin))
+	assert.Equal(t, `apiVersion: v1
+kind: Deployment
+metadata:
+  name: clown
+  annotations:
+    config.kubernetes.io/origin: |
+      path: deployment.yaml
+      repo: github.com/myrepo
+      ref: master
+spec:
+  numReplicas: 1
+`, r.MustString())
+	or, err := r.GetOrigin()
+	assert.NoError(t, err)
+	assert.Equal(t, origin, or)
+}
+
+func TestTransformations(t *testing.T) {
+	r, err := factory.FromBytes([]byte(`
+apiVersion: v1
+kind: Deployment
+metadata:
+  name: clown
+spec:
+  numReplicas: 1
+`))
+	assert.NoError(t, err)
+	origin1 := &Origin{
+		Repo:         "github.com/myrepo",
+		Ref:          "master",
+		ConfiguredIn: "config.yaml",
+		ConfiguredBy: kyaml.ResourceIdentifier{
+			TypeMeta: kyaml.TypeMeta{
+				APIVersion: "builtin",
+				Kind:       "Generator",
+			},
+			NameMeta: kyaml.NameMeta{
+				Name:      "my-name",
+				Namespace: "my-namespace",
+			},
+		},
+	}
+	origin2 := &Origin{
+		ConfiguredIn: "../base/config.yaml",
+		ConfiguredBy: kyaml.ResourceIdentifier{
+			TypeMeta: kyaml.TypeMeta{
+				APIVersion: "builtin",
+				Kind:       "Generator",
+			},
+			NameMeta: kyaml.NameMeta{
+				Name:      "my-name",
+				Namespace: "my-namespace",
+			},
+		},
+	}
+	assert.NoError(t, r.AddTransformation(origin1))
+	assert.Equal(t, `apiVersion: v1
+kind: Deployment
+metadata:
+  name: clown
+  annotations:
+    alpha.config.kubernetes.io/transformations: |
+      - repo: github.com/myrepo
+        ref: master
+        configuredIn: config.yaml
+        configuredBy:
+          apiVersion: builtin
+          kind: Generator
+          name: my-name
+          namespace: my-namespace
+spec:
+  numReplicas: 1
+`, r.MustString())
+	assert.NoError(t, r.AddTransformation(origin2))
+	assert.Equal(t, `apiVersion: v1
+kind: Deployment
+metadata:
+  name: clown
+  annotations:
+    alpha.config.kubernetes.io/transformations: |
+      - repo: github.com/myrepo
+        ref: master
+        configuredIn: config.yaml
+        configuredBy:
+          apiVersion: builtin
+          kind: Generator
+          name: my-name
+          namespace: my-namespace
+      - configuredIn: ../base/config.yaml
+        configuredBy:
+          apiVersion: builtin
+          kind: Generator
+          name: my-name
+          namespace: my-namespace
+spec:
+  numReplicas: 1
+`, r.MustString())
+	transformations, err := r.GetTransformations()
+	assert.NoError(t, err)
+	assert.Equal(t, Transformations{origin1, origin2}, transformations)
+	assert.NoError(t, r.ClearTransformations())
+	assert.Equal(t, `apiVersion: v1
+kind: Deployment
+metadata:
+  name: clown
+spec:
+  numReplicas: 1
+`, r.MustString())
 }

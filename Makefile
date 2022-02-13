@@ -12,7 +12,7 @@ MYGOBIN = $(shell go env GOPATH)/bin
 endif
 export PATH := $(MYGOBIN):$(PATH)
 MODULES := '"cmd/config" "api/" "kustomize/" "kyaml/"'
-LATEST_V4_RELEASE=v4.4.0
+LATEST_V4_RELEASE=v4.5.1
 
 # Provide defaults for REPO_OWNER and REPO_NAME if not present.
 # Typically these values would be provided by Prow.
@@ -40,7 +40,6 @@ verify-kustomize: \
 prow-presubmit-check: \
 	install-tools \
 	lint-kustomize \
-	test-multi-module \
 	test-unit-kustomize-all \
 	test-unit-cmd-all \
 	test-go-mod \
@@ -84,11 +83,6 @@ $(MYGOBIN)/pluginator:
 	go install .
 
 # Build from local source.
-$(MYGOBIN)/prchecker:
-	cd cmd/prchecker; \
-	go install .
-
-# Build from local source.
 $(MYGOBIN)/kustomize: build-kustomize-api
 	cd kustomize; \
 	go install .
@@ -102,7 +96,6 @@ install-tools: \
 	$(MYGOBIN)/k8scopy \
 	$(MYGOBIN)/mdrip \
 	$(MYGOBIN)/pluginator \
-	$(MYGOBIN)/prchecker \
 	$(MYGOBIN)/stringer
 
 ### Begin kustomize plugin rules.
@@ -127,7 +120,7 @@ install-tools: \
 #   module (it's linked into the api).
 
 # Where all generated builtin plugin code should go.
-pGen=api/builtins
+pGen=api/internal/builtins
 # Where the builtin Go plugin modules live.
 pSrc=plugin/builtin
 
@@ -143,7 +136,8 @@ _builtinplugins = \
 	PatchJson6902Transformer.go \
 	PatchStrategicMergeTransformer.go \
 	PatchTransformer.go \
-	PrefixSuffixTransformer.go \
+	PrefixTransformer.go \
+	SuffixTransformer.go \
 	ReplacementTransformer.go \
 	ReplicaCountTransformer.go \
 	SecretGenerator.go \
@@ -171,7 +165,8 @@ $(pGen)/NamespaceTransformer.go: $(pSrc)/namespacetransformer/NamespaceTransform
 $(pGen)/PatchJson6902Transformer.go: $(pSrc)/patchjson6902transformer/PatchJson6902Transformer.go
 $(pGen)/PatchStrategicMergeTransformer.go: $(pSrc)/patchstrategicmergetransformer/PatchStrategicMergeTransformer.go
 $(pGen)/PatchTransformer.go: $(pSrc)/patchtransformer/PatchTransformer.go
-$(pGen)/PrefixSuffixTransformer.go: $(pSrc)/prefixsuffixtransformer/PrefixSuffixTransformer.go
+$(pGen)/PrefixTransformer.go: $(pSrc)/prefixtransformer/PrefixTransformer.go
+$(pGen)/SuffixTransformer.go: $(pSrc)/suffixtransformer/SuffixTransformer.go
 $(pGen)/ReplacementTransformer.go: $(pSrc)/replacementtransformer/ReplacementTransformer.go
 $(pGen)/ReplicaCountTransformer.go: $(pSrc)/replicacounttransformer/ReplicaCountTransformer.go
 $(pGen)/SecretGenerator.go: $(pSrc)/secretgenerator/SecretGenerator.go
@@ -229,8 +224,8 @@ generate-kustomize-api: $(MYGOBIN)/k8scopy
 
 .PHONY: test-unit-kustomize-api
 test-unit-kustomize-api: build-kustomize-api
-	cd api; go test ./...  -ldflags "-X sigs.k8s.io/kustomize/api/provenance.version=v444.333.222"; \
-	cd krusty; OPENAPI_TEST=true go test -run TestCustomOpenAPIFieldFromComponentWithOverlays
+	cd api; go test ./...  -ldflags "-X sigs.k8s.io/kustomize/api/provenance.version=v444.333.222"
+	cd api/krusty; OPENAPI_TEST=true go test -run TestCustomOpenAPIFieldFromComponentWithOverlays
 
 .PHONY: test-unit-kustomize-plugins
 test-unit-kustomize-plugins:
@@ -251,19 +246,6 @@ test-unit-cmd-all:
 
 test-go-mod:
 	./hack/check-go-mod.sh
-
-# Environment variables are defined at
-# https://github.com/kubernetes/test-infra/blob/master/prow/jobs.md#job-environment-variables
-.PHONY: test-multi-module
-test-multi-module: $(MYGOBIN)/prchecker
-	( \
-		export MYGOBIN=$(MYGOBIN); \
-		export REPO_OWNER=$(REPO_OWNER); \
-		export REPO_NAME=$(REPO_NAME); \
-		export PULL_NUMBER=$(PULL_NUMBER); \
-		export MODULES=$(MODULES); \
-		./hack/check-multi-module.sh; \
-	)
 
 .PHONY:
 test-examples-e2e-kustomize: $(MYGOBIN)/mdrip $(MYGOBIN)/kind
@@ -358,7 +340,6 @@ clean: clean-kustomize-external-go-plugin
 	rm -f $(MYGOBIN)/golangci-lint-kustomize
 	rm -f $(MYGOBIN)/kustomize
 	rm -f $(MYGOBIN)/mdrip
-	rm -f $(MYGOBIN)/prchecker
 	rm -f $(MYGOBIN)/stringer
 
 # Handle pluginator manually.

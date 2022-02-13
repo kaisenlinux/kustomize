@@ -4,12 +4,15 @@
 package krusty_test
 
 import (
+	"fmt"
+	"net/http"
 	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"sigs.k8s.io/kustomize/api/internal/utils"
 	"sigs.k8s.io/kustomize/api/krusty"
+	"sigs.k8s.io/kustomize/api/loader"
 	"sigs.k8s.io/kustomize/kyaml/filesys"
 )
 
@@ -72,6 +75,91 @@ spec:
     name: nginx
 `, string(yml))
 	assert.NoError(t, fSys.RemoveAll(tmpDir.String()))
+}
+
+func TestRemoteResourceGitHTTP(t *testing.T) {
+	output := `apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app: myapp
+  name: dev-myapp-pod
+spec:
+  containers:
+  - image: nginx:1.7.9
+    name: nginx
+`
+	tests := []struct {
+		input []byte
+	}{
+		{
+			input: []byte(`
+resources:
+- https://github.com/kubernetes-sigs/kustomize/examples/multibases/dev/?ref=v1.0.6
+`),
+		},
+		{
+			input: []byte(`
+resources:
+- https://github.com/kubernetes-sigs/kustomize//examples/multibases/dev/?ref=v1.0.6
+`),
+		},
+		{
+			input: []byte(`
+resources:
+- git::https://github.com/kubernetes-sigs/kustomize/examples/multibases/dev/?ref=v1.0.6
+`),
+		},
+		{
+			input: []byte(`
+resources:
+- git::https://github.com/kubernetes-sigs/kustomize//examples/multibases/dev/?ref=v1.0.6
+`),
+		},
+	}
+
+	for _, test := range tests {
+		fSys := filesys.MakeFsOnDisk()
+		b := krusty.MakeKustomizer(krusty.MakeDefaultOptions())
+		tmpDir, err := filesys.NewTmpConfirmedDir()
+		assert.NoError(t, err)
+		assert.NoError(t, fSys.WriteFile(filepath.Join(tmpDir.String(), "kustomization.yaml"), test.input))
+		m, err := b.Run(fSys, tmpDir.String())
+		if utils.IsErrTimeout(err) {
+			// Don't fail on timeouts.
+			t.SkipNow()
+		}
+		assert.NoError(t, err)
+		yml, err := m.AsYaml()
+		assert.NoError(t, err)
+		assert.Equal(t, output, string(yml))
+		assert.NoError(t, fSys.RemoveAll(tmpDir.String()))
+	}
+}
+
+func TestRemoteResourceWithHTTPError(t *testing.T) {
+	fSys := filesys.MakeFsOnDisk()
+	b := krusty.MakeKustomizer(krusty.MakeDefaultOptions())
+	tmpDir, err := filesys.NewTmpConfirmedDir()
+	assert.NoError(t, err)
+
+	url404 := "https://github.com/thisisa404.yaml"
+	kusto := filepath.Join(tmpDir.String(), "kustomization.yaml")
+	assert.NoError(t, fSys.WriteFile(kusto, []byte(fmt.Sprintf(`
+resources:
+- %s
+`, url404))))
+
+	_, err = b.Run(fSys, tmpDir.String())
+	if utils.IsErrTimeout(err) {
+		// Don't fail on timeouts.
+		t.SkipNow()
+	}
+
+	httpErr := fmt.Errorf("%w: status code %d (%s)", loader.ErrorHTTP, 404, http.StatusText(404))
+	accuFromErr := fmt.Errorf("accumulating resources from '%s': %w", url404, httpErr)
+	expectedErr := fmt.Errorf("accumulating resources: %w", accuFromErr)
+	assert.EqualErrorf(t, err, expectedErr.Error(), url404)
 }
 
 func TestRemoteResourceAnnoOrigin(t *testing.T) {

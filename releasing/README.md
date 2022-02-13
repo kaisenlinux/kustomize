@@ -45,11 +45,13 @@ Thus, do `kyaml` first, then `cmd/config`, etc.
 
 ## Prep work
 
-#### Prepare your source directory
+### ⚠️ IMPORTANT: Check for [release-blocking issues](https://github.com/kubernetes-sigs/kustomize/issues?q=label%3Arelease-blocker+is%3Aclosed)
 
-The release scripts expect Kustomize code to be cloned at a path ending in `sigs.k8s.io/kustomize`. Run all commands from that directory unless otherwise specified.
+We use the `release-blocker` tag to track issues that need to be solved before the next release. Typically, this would be a new regression introduced on the master branch and not present in the previous release. If any such issues exist, the release should be delayed.
 
-#### Consider fetching new OpenAPI data
+It is also a good idea to scan any [untriaged issues](https://github.com/kubernetes-sigs/kustomize/issues?q=is%3Aissue+is%3Aopen+label%3Aneeds-triage) for potential blockers we haven't labelled yet before proceeding.
+
+### Consider fetching new OpenAPI data
 The Kubernetes OpenAPI data changes no more frequently than once per quarter.
 You can check the current builtin versions that kustomize is using with the
 following command.
@@ -60,6 +62,12 @@ kustomize openapi info
 
 Instructions on how to get a new OpenAPI sample can be found in the
 [OpenAPI Readme].
+
+### Set up the release tools
+
+#### Prepare your source directory
+
+The release scripts expect Kustomize code to be cloned at a path ending in `sigs.k8s.io/kustomize`. Run all commands from that directory unless otherwise specified.
 
 #### Load some helper functions
 
@@ -124,7 +132,8 @@ Undraft the release on the [kustomize repo release page]:
 
 ```
 gorepomod pin kyaml --doIt &&
-go mod edit -require=sigs.k8s.io/kustomize/kyaml@$versionKyaml plugin/builtin/prefixsuffixtransformer/go.mod &&
+go mod edit -require=sigs.k8s.io/kustomize/kyaml@$versionKyaml plugin/builtin/prefixtransformer/go.mod &&
+go mod edit -require=sigs.k8s.io/kustomize/kyaml@$versionKyaml plugin/builtin/suffixtransformer/go.mod &&
 go mod edit -require=sigs.k8s.io/kustomize/kyaml@$versionKyaml plugin/builtin/replicacounttransformer/go.mod &&
 go mod edit -require=sigs.k8s.io/kustomize/kyaml@$versionKyaml plugin/builtin/patchtransformer/go.mod &&
 go mod edit -require=sigs.k8s.io/kustomize/kyaml@$versionKyaml plugin/builtin/patchjson6902transformer/go.mod
@@ -376,10 +385,44 @@ project [k8s-staging-kustomize].
 Commit and push your changes. Then create a PR to [k8s.io] to promote
 new images. Assign the PR to @monopole and @Shell32-natsu.
 
-----
+## Update kustomize-in-kubectl
+
+[kubernetes/kubernetes]: https://github.com/kubernetes/kubernetes
+[newest kustomize releases]: https://github.com/kubernetes-sigs/kustomize/releases
+
+To update the version of kustomize shipped with kubectl, first
+fork and clone the [kubernetes/kubernetes] repo.
+
+In the root of the kubernetes repo, run the following commands, modifying
+the version numbers to match the [newest kustomize releases]:
+```bash
+./hack/pin-dependency.sh sigs.k8s.io/kustomize/kyaml v0.11.0
+./hack/pin-dependency.sh sigs.k8s.io/kustomize/cmd/config v0.9.13
+./hack/pin-dependency.sh sigs.k8s.io/kustomize/api v0.8.11
+./hack/pin-dependency.sh sigs.k8s.io/kustomize/kustomize/v4 v4.2.0
+
+./hack/update-vendor.sh
+./hack/update-internal-modules.sh 
+./hack/lint-dependencies.sh 
+```
+
+If needed, manually update the kustomize attachment points in the following files:
+
+`staging/src/k8s.io/cli-runtime/pkg/resource/kustomizevisitor.go`
+
+`staging/src/k8s.io/cli-runtime/pkg/resource/kustomizevisitor_test.go`
+
+`staging/src/k8s.io/kubectl/pkg/cmd/kustomize/kustomize.go`
+
+`staging/src/k8s.io/cli-runtime/pkg/resource/builder.go`
+
+Here are some example PRs:
+
+https://github.com/kubernetes/kubernetes/pull/103419
+
+https://github.com/kubernetes/kubernetes/pull/106389
 
 ----
-
 Older notes follow:
 
 ## Public Modules

@@ -59,11 +59,7 @@ apiVersion: foo
 kind: Bar
 xxx:
 `,
-			error: `considering field '' of object
-apiVersion: foo/v1
-kind: Bar
-xxx:
-: cannot set or create an empty field name`,
+			error: `considering field '' of object Bar.v1.foo/[noName].[noNs]: cannot set or create an empty field name`,
 			filter: fieldspec.Filter{
 				SetValue: filtersutil.SetScalar("e"),
 			},
@@ -216,11 +212,7 @@ kind: Bar
 a:
   b: a
 `,
-			error: `considering field 'a/b/c' of object
-kind: Bar
-a:
-  b: a
-: expected sequence or mapping node`,
+			error: `considering field 'a/b/c' of object Bar.[noVer].[noGrp]/[noName].[noNs]: expected sequence or mapping node`,
 			filter: fieldspec.Filter{
 				SetValue: filtersutil.SetScalar("e"),
 			},
@@ -563,6 +555,88 @@ a:
 				strings.TrimSpace(out.String())) {
 				t.FailNow()
 			}
+		})
+	}
+}
+
+func TestFilter_FieldPaths(t *testing.T) {
+	testCases := map[string]struct {
+		input     string
+		fieldSpec string
+		expected  []string
+	}{
+		"fieldpath containing SequenceNode": {
+			input: `
+apiVersion: v1
+kind: Pod
+metadata:
+  name: app
+spec:
+  containers:
+  - name: store
+    image: redis:6.2.6
+  - name: server
+    image: nginx:latest
+`,
+			fieldSpec: `
+path: spec/containers[]/image
+kind: Pod
+`,
+			expected: []string{
+				"spec.containers.image",
+				"spec.containers.image",
+			},
+		},
+		"fieldpath with MappingNode": {
+			input: `
+apiVersion: v1
+kind: Pod
+metadata:
+  name: app
+spec:
+  containers:
+  - name: store
+    image: redis:6.2.6
+  - name: server
+    image: nginx:latest
+`,
+			fieldSpec: `
+path: metadata/name
+kind: Pod
+`,
+			expected: []string{
+				"metadata.name",
+			},
+		},
+	}
+	for name, tc := range testCases {
+		var fieldPaths []string
+		trackableSetter := filtersutil.TrackableSetter{}
+		trackableSetter.WithMutationTracker(func(key, value, tag string, node *yaml.RNode) {
+			fieldPaths = append(fieldPaths, strings.Join(node.FieldPath(), "."))
+		})
+		filter := fieldspec.Filter{
+			SetValue: trackableSetter.SetScalar("foo"),
+		}
+
+		t.Run(name, func(t *testing.T) {
+			err := yaml.Unmarshal([]byte(tc.fieldSpec), &filter.FieldSpec)
+			assert.NoError(t, err)
+			rw := &kio.ByteReadWriter{
+				Reader:                bytes.NewBufferString(tc.input),
+				Writer:                &bytes.Buffer{},
+				OmitReaderAnnotations: true,
+			}
+
+			// run the filter
+			err = kio.Pipeline{
+				Inputs:  []kio.Reader{rw},
+				Filters: []kio.Filter{kio.FilterAll(filter)},
+				Outputs: []kio.Writer{rw},
+			}.Execute()
+
+			assert.NoError(t, err)
+			assert.Equal(t, tc.expected, fieldPaths)
 		})
 	}
 }

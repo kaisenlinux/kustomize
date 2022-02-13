@@ -1,3 +1,9 @@
+kustomize (4.5.2-1kaisen) kaisen-packages; urgency=medium
+
+  * Import kustomize 4.5.2 version
+
+ -- Kevin Chevreuil - Kaisen <kaisen@kaisenlinux.org>  Sun, 13 Feb 2022 16:07:38 +0100
+
 kustomize (4.4.1-3kaisen) kaisen-packages; urgency=medium
 
   * Add homepage link

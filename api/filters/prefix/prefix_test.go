@@ -1,17 +1,20 @@
 // Copyright 2019 The Kubernetes Authors.
 // SPDX-License-Identifier: Apache-2.0
 
-package prefixsuffix_test
+package prefix_test
 
 import (
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"sigs.k8s.io/kustomize/api/filters/prefixsuffix"
+	"sigs.k8s.io/kustomize/api/filters/prefix"
 	filtertest_test "sigs.k8s.io/kustomize/api/testutils/filtertest"
 	"sigs.k8s.io/kustomize/api/types"
+	"sigs.k8s.io/kustomize/kyaml/yaml"
 )
+
+var mutationTrackerStub = filtertest_test.MutationTrackerStub{}
 
 var tests = map[string]TestCase{
 	"prefix": {
@@ -37,62 +40,10 @@ kind: Bar
 metadata:
   name: foo-instance
 `,
-		filter: prefixsuffix.Filter{Prefix: "foo-"},
-		fs:     types.FieldSpec{Path: "metadata/name"},
-	},
-
-	"suffix": {
-		input: `
-apiVersion: example.com/v1
-kind: Foo
-metadata:
-  name: instance
----
-apiVersion: example.com/v1
-kind: Bar
-metadata:
-  name: instance
-`,
-		expected: `
-apiVersion: example.com/v1
-kind: Foo
-metadata:
-  name: instance-foo
----
-apiVersion: example.com/v1
-kind: Bar
-metadata:
-  name: instance-foo
-`,
-		filter: prefixsuffix.Filter{Suffix: "-foo"},
-		fs:     types.FieldSpec{Path: "metadata/name"},
-	},
-
-	"prefix-suffix": {
-		input: `
-apiVersion: example.com/v1
-kind: Foo
-metadata:
-  name: instance
----
-apiVersion: example.com/v1
-kind: Bar
-metadata:
-  name: instance
-`,
-		expected: `
-apiVersion: example.com/v1
-kind: Foo
-metadata:
-  name: bar-instance-foo
----
-apiVersion: example.com/v1
-kind: Bar
-metadata:
-  name: bar-instance-foo
-`,
-		filter: prefixsuffix.Filter{Prefix: "bar-", Suffix: "-foo"},
-		fs:     types.FieldSpec{Path: "metadata/name"},
+		filter: prefix.Filter{
+			Prefix:    "foo-",
+			FieldSpec: types.FieldSpec{Path: "metadata/name"},
+		},
 	},
 
 	"data-fieldspecs": {
@@ -130,29 +81,74 @@ a:
   b:
     c: foo-d
 `,
-		filter: prefixsuffix.Filter{Prefix: "foo-"},
-		fs:     types.FieldSpec{Path: "a/b/c"},
+		filter: prefix.Filter{
+			Prefix:    "foo-",
+			FieldSpec: types.FieldSpec{Path: "a/b/c"},
+		},
+	},
+
+	"mutation tracker": {
+		input: `
+apiVersion: example.com/v1
+kind: Foo
+metadata:
+  name: instance
+---
+apiVersion: example.com/v1
+kind: Bar
+metadata:
+  name: instance
+`,
+		expected: `
+apiVersion: example.com/v1
+kind: Foo
+metadata:
+  name: foo-instance
+---
+apiVersion: example.com/v1
+kind: Bar
+metadata:
+  name: foo-instance
+`,
+		filter: prefix.Filter{
+			Prefix:    "foo-",
+			FieldSpec: types.FieldSpec{Path: "metadata/name"},
+		},
+		mutationTracker: mutationTrackerStub.MutationTracker,
+		expectedSetValueArgs: []filtertest_test.SetValueArg{
+			{
+				Value:    "foo-instance",
+				NodePath: []string{"metadata", "name"},
+			},
+			{
+				Value:    "foo-instance",
+				NodePath: []string{"metadata", "name"},
+			},
+		},
 	},
 }
 
 type TestCase struct {
-	input    string
-	expected string
-	filter   prefixsuffix.Filter
-	fs       types.FieldSpec
+	input                string
+	expected             string
+	filter               prefix.Filter
+	mutationTracker      func(key, value, tag string, node *yaml.RNode)
+	expectedSetValueArgs []filtertest_test.SetValueArg
 }
 
 func TestFilter(t *testing.T) {
 	for name := range tests {
+		mutationTrackerStub.Reset()
 		test := tests[name]
+		test.filter.WithMutationTracker(test.mutationTracker)
 		t.Run(name, func(t *testing.T) {
-			test.filter.FieldSpec = test.fs
 			if !assert.Equal(t,
 				strings.TrimSpace(test.expected),
 				strings.TrimSpace(
 					filtertest_test.RunFilter(t, test.input, test.filter))) {
 				t.FailNow()
 			}
+			assert.Equal(t, test.expectedSetValueArgs, mutationTrackerStub.SetValueArgs())
 		})
 	}
 }

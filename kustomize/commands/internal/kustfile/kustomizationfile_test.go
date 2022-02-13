@@ -37,6 +37,7 @@ func TestFieldOrder(t *testing.T) {
 		"SecretGenerator",
 		"HelmCharts",
 		"HelmChartInflationGenerator",
+		"HelmGlobals",
 		"GeneratorOptions",
 		"Vars",
 		"Images",
@@ -47,6 +48,8 @@ func TestFieldOrder(t *testing.T) {
 		"Transformers",
 		"Inventory",
 		"Components",
+		"OpenAPI",
+		"BuildMetadata",
 	}
 	actual := determineFieldOrder()
 	if len(expected) != len(actual) {

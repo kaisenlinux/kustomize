@@ -65,7 +65,7 @@ func TestAddTransformerNoArgs(t *testing.T) {
 
 	cmd := newCmdAddTransformer(fSys)
 	err := cmd.Execute()
-	assert.EqualError(t, err, "must specify a transformer file")
+	assert.EqualError(t, err, "must specify a yaml file which contains a transformer plugin resource")
 }
 
 func TestAddTransformerMissingKustomizationYAML(t *testing.T) {
