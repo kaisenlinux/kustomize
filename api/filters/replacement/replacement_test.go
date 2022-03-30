@@ -42,7 +42,7 @@ spec:
   - select:
       kind: Deployment
       name: deploy
-    fieldPaths: 
+    fieldPaths:
     - spec.template.spec.containers.1.image
 `,
 			expected: `apiVersion: v1
@@ -95,7 +95,7 @@ spec:
   targets:
   - select:
       kind: Deployment
-    fieldPaths: 
+    fieldPaths:
     - spec.template.spec.containers
 `,
 			expected: `apiVersion: v1
@@ -205,13 +205,13 @@ spec:
         command: ["printenv"]
         args:
         - example.com
-        - 8080
+        - "8080"
       - name: busybox
         image: busybox:latest
         args:
         - echo
         - example.com
-        - 8080
+        - "8080"
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -328,7 +328,7 @@ spec:
   - select:
       kind: Deployment
       name: deploy1
-    fieldPaths: 
+    fieldPaths:
     - spec.template.spec.containers.[name=postgresdb].image
 `,
 			expected: `apiVersion: v1
@@ -405,7 +405,7 @@ spec:
   targets:
   - select:
       version: v3
-    fieldPaths: 
+    fieldPaths:
     - spec.template.spec.containers.1.image
 `,
 			expected: `apiVersion: my-group-1/v1
@@ -492,7 +492,7 @@ spec:
   targets:
   - select:
       name: my-name-2
-    fieldPaths: 
+    fieldPaths:
     - spec.template.spec.containers.1.image
 `,
 			expected: `spec:
@@ -582,7 +582,7 @@ spec:
     reject:
     - name: deploy2
     - name: deploy3
-    fieldPaths: 
+    fieldPaths:
     - spec.template.spec.containers.1.image
 `,
 			expected: `apiVersion: v1
@@ -662,7 +662,7 @@ spec:
     reject:
     - kind: Deployment
       name: my-name
-    fieldPaths: 
+    fieldPaths:
     - spec.template.spec.containers.1.image
 `,
 			expected: `apiVersion: v1
@@ -731,7 +731,7 @@ spec:
     reject:
     - kind: Deployment
     - name: my-name
-    fieldPaths: 
+    fieldPaths:
     - spec.template.spec.containers.1.image
 `,
 			expected: `apiVersion: v1
@@ -799,7 +799,7 @@ spec:
   - select:
       kind: Deployment
       name: deploy1
-    fieldPaths: 
+    fieldPaths:
     - spec.template.spec.containers.1.image
     options:
       delimiter: ':'
@@ -872,7 +872,7 @@ spec:
   - select:
       kind: Pod
       name: pod2
-    fieldPaths: 
+    fieldPaths:
     - spec.volumes.0.projected.sources.0.configMap.items.0.path
     options:
       delimiter: '/'
@@ -948,7 +948,7 @@ spec:
   - select:
       kind: Pod
       name: pod1
-    fieldPaths: 
+    fieldPaths:
     - spec.volumes.0.projected.sources.0.configMap.items.0.path
     options:
       delimiter: '/'
@@ -1024,7 +1024,7 @@ spec:
   - select:
       kind: Pod
       name: pod1
-    fieldPaths: 
+    fieldPaths:
     - spec.volumes.0.projected.sources.0.configMap.items.0.path
     options:
       delimiter: '/'
@@ -1100,7 +1100,7 @@ spec:
   - select:
       kind: Pod
       name: pod1
-    fieldPaths: 
+    fieldPaths:
     - spec.volumes.0.projected.sources.0.configMap.items.0.path
     options:
       delimiter: '/'
@@ -1176,7 +1176,7 @@ spec:
   - select:
       kind: Pod
       name: pod1
-    fieldPaths: 
+    fieldPaths:
     - spec.volumes.0.projected.sources.0.configMap.items.0.path
     options:
       delimiter: '/'
@@ -1212,7 +1212,7 @@ metadata:
   targets:
   - select:
       name: deploy1
-    fieldPaths: 
+    fieldPaths:
     - spec.template.spec.containers
     options:
       create: true
@@ -1223,7 +1223,7 @@ metadata:
   targets:
   - select:
       name: deploy2
-    fieldPaths: 
+    fieldPaths:
     - spec.template.spec.containers
 `,
 			expected: `apiVersion: v1
@@ -1285,12 +1285,12 @@ spec:
     kind: Pod
     name: pod
     fieldPath: spec.containers
-    options: 
+    options:
       delimiter: "/"
   targets:
   - select:
       kind: Deployment
-    fieldPaths: 
+    fieldPaths:
     - spec.template.spec.containers
 `,
 			expectedErr: "delimiter option can only be used with scalar nodes",
@@ -1331,9 +1331,9 @@ spec:
   targets:
   - select:
       kind: Deployment
-    fieldPaths: 
+    fieldPaths:
     - spec.template.spec.containers
-    options: 
+    options:
       delimiter: "/"
 `,
 			expectedErr: "delimiter option can only be used with scalar nodes",
@@ -1354,7 +1354,7 @@ metadata:
   targets:
   - select:
       name: custom
-    fieldPaths: 
+    fieldPaths:
     - metadata.annotations.[f.g.h/i-j]
 `,
 			expected: `apiVersion: v1
@@ -1431,6 +1431,208 @@ spec:
     name: second
     version: latest
     property: second`,
+		},
+		"one replacements target has multiple value": {
+			input: `apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: sample-deploy
+  name: sample-deploy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sample-deploy
+  template:
+    metadata:
+      labels:
+        app: sample-deploy
+    spec:
+      containers:
+      - image: nginx
+        name: main
+        env:
+        - name: deployment-name
+          value: XXXXX
+        - name: foo
+          value: bar
+      - image: nginx
+        name: sidecar
+        env:
+        - name: deployment-name
+          value: YYYYY
+`,
+			replacements: `replacements:
+- source:
+    kind: Deployment
+    name: sample-deploy
+    fieldPath: metadata.name
+  targets:
+  - select:
+      kind: Deployment
+    fieldPaths:
+    - spec.template.spec.containers.[image=nginx].env.[name=deployment-name].value
+`,
+			expected: `apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: sample-deploy
+  name: sample-deploy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sample-deploy
+  template:
+    metadata:
+      labels:
+        app: sample-deploy
+    spec:
+      containers:
+      - image: nginx
+        name: main
+        env:
+        - name: deployment-name
+          value: sample-deploy
+        - name: foo
+          value: bar
+      - image: nginx
+        name: sidecar
+        env:
+        - name: deployment-name
+          value: sample-deploy`,
+		},
+		"index contains '*' character": {
+			input: `apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: sample-deploy
+  name: sample-deploy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sample-deploy
+  template:
+    metadata:
+      labels:
+        app: sample-deploy
+    spec:
+      containers:
+      - image: nginx
+        name: main
+        env:
+        - name: deployment-name
+          value: XXXXX
+`,
+			replacements: `replacements:
+- source:
+    kind: Deployment
+    name: sample-deploy
+    fieldPath: metadata.name
+  targets:
+  - select:
+      kind: Deployment
+    fieldPaths:
+    - spec.template.spec.containers.*.env.[name=deployment-name].value
+`,
+			expected: `apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: sample-deploy
+  name: sample-deploy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sample-deploy
+  template:
+    metadata:
+      labels:
+        app: sample-deploy
+    spec:
+      containers:
+      - image: nginx
+        name: main
+        env:
+        - name: deployment-name
+          value: sample-deploy`,
+		},
+		"list index contains '*' character": {
+			input: `apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: sample-deploy
+  name: sample-deploy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sample-deploy
+  template:
+    metadata:
+      labels:
+        app: sample-deploy
+    spec:
+      containers:
+      - image: nginx
+        name: main
+        env:
+        - name: deployment-name
+          value: XXXXX
+        - name: foo
+          value: bar
+      - image: nginx
+        name: sidecar
+        env:
+        - name: deployment-name
+          value: YYYYY
+`,
+			replacements: `replacements:
+- source:
+    kind: Deployment
+    name: sample-deploy
+    fieldPath: metadata.name
+  targets:
+  - select:
+      kind: Deployment
+    fieldPaths:
+    - spec.template.spec.containers.*.env.[name=deployment-name].value
+`,
+			expected: `apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: sample-deploy
+  name: sample-deploy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sample-deploy
+  template:
+    metadata:
+      labels:
+        app: sample-deploy
+    spec:
+      containers:
+      - image: nginx
+        name: main
+        env:
+        - name: deployment-name
+          value: sample-deploy
+        - name: foo
+          value: bar
+      - image: nginx
+        name: sidecar
+        env:
+        - name: deployment-name
+          value: sample-deploy`,
 		},
 		"multiple field paths in target": {
 			input: `apiVersion: v1
@@ -1513,7 +1715,7 @@ spec:
 kind: Deployment
 metadata:
   name: pre-deploy
-  annotations: 
+  annotations:
     internal.config.kubernetes.io/previousNames: deploy,deploy
     internal.config.kubernetes.io/previousKinds: CronJob,Deployment
     internal.config.kubernetes.io/previousNamespaces: default,default
@@ -1535,7 +1737,7 @@ spec:
   - select:
       kind: Deployment
       name: deploy
-    fieldPaths: 
+    fieldPaths:
     - spec.template.spec.containers.1.image
 `,
 			expected: `apiVersion: v1
@@ -1556,7 +1758,6 @@ spec:
         name: postgresdb
 `,
 		},
-
 		"replacement source.fieldPath does not exist": {
 			input: `apiVersion: v1
 kind: ConfigMap
@@ -1628,7 +1829,7 @@ spec:
   targets:
   - select:
       annotationSelector: foo=bar-1
-    fieldPaths: 
+    fieldPaths:
     - spec.template.spec.containers.1.image
 `,
 			expected: `apiVersion: v1
@@ -1702,7 +1903,7 @@ spec:
   targets:
   - select:
       labelSelector: foo=bar-1
-    fieldPaths: 
+    fieldPaths:
     - spec.template.spec.containers.1.image
 `,
 			expected: `apiVersion: v1
@@ -1778,7 +1979,7 @@ spec:
       kind: Deployment
     reject:
     - labelSelector: foo=bar-2
-    fieldPaths: 
+    fieldPaths:
     - spec.template.spec.containers.1.image
 `,
 			expected: `apiVersion: v1
@@ -1810,6 +2011,310 @@ spec:
         name: nginx-tagged
       - image: postgres:1.8.0
         name: postgresdb
+`,
+		},
+		"string source -> integer target": {
+			input: `apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: config
+data:
+  PORT: "8080"
+---
+apiVersion: apps/v1
+kind: Pod
+metadata:
+  name: pod
+spec:
+  containers:
+  - image: busybox
+    name: myapp-container
+    ports:
+    - containerPort: 80
+`,
+			replacements: `replacements:
+- source:
+    kind: ConfigMap
+    name: config
+    fieldPath: data.PORT
+  targets:
+  - select:
+      kind: Pod
+    fieldPaths:
+    - spec.containers.0.ports.0.containerPort
+`,
+			expected: `apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: config
+data:
+  PORT: "8080"
+---
+apiVersion: apps/v1
+kind: Pod
+metadata:
+  name: pod
+spec:
+  containers:
+  - image: busybox
+    name: myapp-container
+    ports:
+    - containerPort: 8080
+`,
+		},
+		"string source -> boolean target": {
+			input: `apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: config
+data:
+  MOUNT_TOKEN: "true"
+---
+apiVersion: apps/v1
+kind: Pod
+metadata:
+  name: pod
+spec:
+  containers:
+  - image: busybox
+    name: myapp-container
+    automountServiceAccountToken: false
+`,
+			replacements: `replacements:
+- source:
+    kind: ConfigMap
+    name: config
+    fieldPath: data.MOUNT_TOKEN
+  targets:
+  - select:
+      kind: Pod
+    fieldPaths:
+    - spec.containers.0.automountServiceAccountToken
+`,
+			expected: `apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: config
+data:
+  MOUNT_TOKEN: "true"
+---
+apiVersion: apps/v1
+kind: Pod
+metadata:
+  name: pod
+spec:
+  containers:
+  - image: busybox
+    name: myapp-container
+    automountServiceAccountToken: true
+`,
+		},
+		// TODO: This is inconsistent with expectations; creating a numerical string would be
+		// expected, unless we had knowledge of the intended type of the field to be
+		// created.
+		"numerical string source -> integer creation": {
+			input: `apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: config
+data:
+  PORT: "8080"
+---
+apiVersion: apps/v1
+kind: Pod
+metadata:
+  name: pod
+spec:
+  containers:
+  - image: busybox
+    name: myapp-container
+    ports:
+    - protocol: TCP
+`,
+			replacements: `replacements:
+- source:
+    kind: ConfigMap
+    name: config
+    fieldPath: data.PORT
+  targets:
+  - select:
+      kind: Pod
+    fieldPaths:
+    - spec.containers.0.ports.0.containerPort
+    - spec.containers.0.ports.0.name
+    options:
+      create: true
+`,
+			expected: `apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: config
+data:
+  PORT: "8080"
+---
+apiVersion: apps/v1
+kind: Pod
+metadata:
+  name: pod
+spec:
+  containers:
+  - image: busybox
+    name: myapp-container
+    ports:
+    - protocol: TCP
+      containerPort: 8080
+      name: 8080
+`,
+		},
+		"integer source -> string target": {
+			input: `apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: config
+data:
+  PORT: "8080"
+---
+apiVersion: apps/v1
+kind: Pod
+metadata:
+  name: pod
+spec:
+  containers:
+  - image: busybox
+    name: myapp-container
+    ports:
+    - containerPort: 80
+`,
+			replacements: `replacements:
+- source:
+    kind: Pod
+    name: pod
+    fieldPath: spec.containers.0.ports.0.containerPort
+  targets:
+  - select:
+      kind: ConfigMap
+    fieldPaths:
+    - data.PORT
+`,
+			expected: `apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: config
+data:
+  PORT: "80"
+---
+apiVersion: apps/v1
+kind: Pod
+metadata:
+  name: pod
+spec:
+  containers:
+  - image: busybox
+    name: myapp-container
+    ports:
+    - containerPort: 80
+`,
+		},
+		"boolean source -> string target": {
+			input: `apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: config
+data:
+  MOUNT_TOKEN: "true"
+---
+apiVersion: apps/v1
+kind: Pod
+metadata:
+  name: pod
+spec:
+  containers:
+  - image: busybox
+    name: myapp-container
+    automountServiceAccountToken: false
+`,
+			replacements: `replacements:
+- source:
+    kind: Pod
+    name: pod
+    fieldPath: spec.containers.0.automountServiceAccountToken
+  targets:
+  - select:
+      kind: ConfigMap
+    fieldPaths:
+    - data.MOUNT_TOKEN
+`,
+			expected: `apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: config
+data:
+  MOUNT_TOKEN: "false"
+---
+apiVersion: apps/v1
+kind: Pod
+metadata:
+  name: pod
+spec:
+  containers:
+  - image: busybox
+    name: myapp-container
+    automountServiceAccountToken: false
+`,
+		},
+		// TODO: This result is expected, but we should create a string and not an
+		// integer if we could know that the target type should be one. As a result,
+		// the actual ConfigMap produces here cannot be applied.
+		"integer source -> integer creation": {
+			input: `apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: config
+data:
+  FOO: "Bar"
+---
+apiVersion: apps/v1
+kind: Pod
+metadata:
+  name: pod
+spec:
+  containers:
+  - image: busybox
+    name: myapp-container
+    ports:
+    - containerPort: 80
+`,
+			replacements: `replacements:
+- source:
+    kind: Pod
+    name: pod
+    fieldPath: spec.containers.0.ports.0.containerPort
+  targets:
+  - select:
+      kind: ConfigMap
+    fieldPaths:
+    - data.PORT
+    options:
+      create: true
+`,
+			expected: `apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: config
+data:
+  FOO: "Bar"
+  PORT: 80
+---
+apiVersion: apps/v1
+kind: Pod
+metadata:
+  name: pod
+spec:
+  containers:
+  - image: busybox
+    name: myapp-container
+    ports:
+    - containerPort: 80
 `,
 		},
 	}

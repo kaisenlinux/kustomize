@@ -1,58 +1,39 @@
-# Docsy Example
+# kustomize website: the alpha of the alpha
 
-[Docsy](https://github.com/google/docsy) is a Hugo theme for technical documentation sites, providing easy site navigation, structure, and more. This **Docsy Example Project** uses the Docsy theme, as well as providing a skeleton documentation structure for you to use. You can either copy this project and edit it with your own content, or use the theme in your projects like any other [Hugo theme](https://gohugo.io/themes/installing-and-using-themes/).
+## Overview
+This is just an example overview of what the new kustomize website might look like. It is forked from the [docsy exmaple website](https://example.docsy.dev/) and heavy based on that.
 
-This Docsy Example Project is hosted at [https://example.docsy.dev/](https://example.docsy.dev/).
+I'm not a frontend dev but I was mostly successful at creating what I thought would be a good outline. However, I couldn't get rid of that picture of porridge with blueberries on it on the landing page! So ignore that and imagine it's something more nautical.
 
-You can find detailed theme instructions in the Docsy user guide: https://docsy.dev/docs/
+I put the most effort into the `Documentation` section. The left-menu bar has the custom structure that is my creation, based on the docsy example, the content of the current kustomize documentation sources and a general vibe of documentation sites I find easy to read.
 
-This is not an officially supported Google product. This project is currently maintained.
+The top bar is customized with the sections I think make sense to split. However, I have customized nothing else inside the `Community`, `Contribute` and `Blog` sections.
 
-## Cloning the Docsy Example Project
+## Building
 
-The following will give you a project that is set up and ready to use (don't forget to use `--recurse-submodules` or you won't pull down some of the code you need to generate a working site). The `hugo server` command builds and serves the site. If you just want to build the site, run `hugo` instead.
+Build and run using Docker or Hugo, then access the site at `http://localhost:1313`.
 
+### Docker
+Dependencies:
+* [docker](https://docs.docker.com/engine/install/)
+* [docker-compose](https://docs.docker.com/compose/install/)
 ```bash
-git clone --recurse-submodules --depth 1 https://github.com/google/docsy-example.git
-cd docsy-example
-hugo server
+docker-compose build
+docker-compomse up -d
 ```
 
-The theme is included as a Git submodule:
-
+### hugo
+Building using the `hugo` command requires the following dependencies:
+* [hugo CLI](https://gohugo.io/getting-started/installing/)
+* [Go](https://go.dev/learn/)
+* [Node.js](https://nodejs.org/en/)
+* npm dependencies
+   ```bash
+   npm install -D autoprefixer
+   npm install -D postcss-cli
+   npm install -D postcss
+   ```
+Start in development mode:
 ```bash
-▶ git submodule
- a053131a4ebf6a59e4e8834a42368e248d98c01d themes/docsy (heads/master)
-```
-
-If you want to do SCSS edits and want to publish these, you need to install `PostCSS` (not needed for `hugo server`):
-
-```bash
-npm install
-```
-
-<!--### Cloning the Example from the Theme Project
-
-
-```bash
-git clone --recurse-submodules --depth 1 https://github.com/docsy.git
-cd tech-doc-hugo-theme/exampleSite
-HUGO_THEMESDIR="../.." hugo server
-```
-
-
-Note that the Hugo Theme Site requires the `exampleSite` to live in a subfolder of the theme itself. To avoid recursive duplication, the example site is added as a Git subtree:
-
-```bash
-git subtree add --prefix exampleSite https://github.com/google/docsy.git  master --squash
-```
-
-To pull in changes, see `pull-deps.sh` script in the theme.-->
-
-## Running the website locally
-
-Once you've cloned the site repo, from the repo root folder, run:
-
-```
-hugo server
+hugo serve -D
 ```

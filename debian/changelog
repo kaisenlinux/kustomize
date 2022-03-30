@@ -1,3 +1,11 @@
+kustomize (4.5.4-1kaisen) kaisen-packages; urgency=medium
+
+  * Import kustomize 4.5.4 version
+  * Update rules (go install is used instead of go get to build)
+  * Add docs
+
+ -- Kevin Chevreuil - Kaisen <kaisen@kaisenlinux.org>  Tue, 29 Mar 2022 23:47:48 +0100
+
 kustomize (4.5.2-1kaisen) kaisen-packages; urgency=medium
 
   * Import kustomize 4.5.2 version
