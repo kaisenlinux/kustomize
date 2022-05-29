@@ -1,3 +1,6 @@
+// Copyright 2022 The Kubernetes Authors.
+// SPDX-License-Identifier: Apache-2.0
+
 package krmfunction
 
 import (
@@ -105,7 +108,7 @@ func (c *Converter) prepareWrapper(content string) string {
 		}
 		// assign to plugin variable
 		if strings.TrimSpace(line) == "var plugin resmap.Configurable" {
-			line = line + `
+			line += `
 	// KustomizePlugin is a global variable defined in every plugin
 	plugin = &KustomizePlugin
 `

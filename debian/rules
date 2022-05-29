@@ -9,7 +9,7 @@ export DEB_BUILD_OPTIONS=nocheck
 	dh $@ --buildsystem=golang
 
 override_dh_auto_build:
-	go install sigs.k8s.io/kustomize/kustomize/v4@latest
+	cd kustomize && go install .
 	mkdir debian/bash-completion
 	obj-x86_64-linux-gnu/bin/kustomize completion bash > debian/bash-completion/kustomize
 	mkdir debian/zsh-completion

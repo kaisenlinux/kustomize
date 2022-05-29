@@ -23,19 +23,19 @@ c: d
 
 func TestResourceNode_SetValue(t *testing.T) {
 	instance := *NewScalarRNode("foo")
-	copy := instance
+	instanceCopy := instance
 	instance.SetYNode(&yaml.Node{Kind: yaml.ScalarNode, Value: "bar"})
 	assert.Equal(t, `bar
-`, assertNoErrorString(t)(copy.String()))
+`, assertNoErrorString(t)(instanceCopy.String()))
 	assert.Equal(t, `bar
 `, assertNoErrorString(t)(instance.String()))
 
 	instance = *NewScalarRNode("foo")
-	copy = instance
+	instanceCopy = instance
 	instance.SetYNode(nil)
 	instance.SetYNode(&yaml.Node{Kind: yaml.ScalarNode, Value: "bar"})
 	assert.Equal(t, `foo
-`, assertNoErrorString(t)(copy.String()))
+`, assertNoErrorString(t)(instanceCopy.String()))
 	assert.Equal(t, `bar
 `, assertNoErrorString(t)(instance.String()))
 }
@@ -142,7 +142,7 @@ func TestElementSetter(t *testing.T) {
 
 	node = MustParse(`
 - a: b
-- c: d	
+- c: d
 `)
 	// If given a key and no values, ElementSetter will
 	// change node to be an empty list
@@ -154,7 +154,7 @@ func TestElementSetter(t *testing.T) {
 
 	node = MustParse(`
 - a: b
-- c: d	
+- c: d
 `)
 	// Return error because ElementSetter will assume all elements are scalar when
 	// there is only value provided.
@@ -580,6 +580,13 @@ a: {}
 	assert.Equal(t, "h\n", assertNoErrorString(t)(rn.String()))
 }
 
+func TestLookup_Fn_create_with_wildcard_error(t *testing.T) {
+	node, err := Parse(s)
+	assert.NoError(t, err)
+	_, err = node.Pipe(LookupCreate(yaml.MappingNode, "a", "b", "*", "t"))
+	assert.Error(t, err, "wildcard is not supported in PathGetter")
+}
+
 func TestLookup(t *testing.T) {
 	s := `n: o
 a:
@@ -864,7 +871,6 @@ func TestMapEntrySetter(t *testing.T) {
 				assert.NotNil(t, err)
 				assert.Equal(t, tc.expectedErr.Error(), err.Error())
 			}
-
 		})
 	}
 }
@@ -1092,15 +1098,14 @@ func (c filter) Filter(object *RNode) (*RNode, error) {
 }
 
 func TestResourceNode_Pipe(t *testing.T) {
-	r0, r1, r2, r3 := &RNode{}, &RNode{}, &RNode{}, &RNode{}
+	var r0, r1, r2, r3 *RNode
 	var called []string
 
 	// check the nil value case
-	r0 = nil
 	_, err := r0.Pipe(FieldMatcher{Name: "foo"})
 	assert.NoError(t, err)
 
-	r0 = &RNode{}
+	r0, r1, r2, r3 = &RNode{}, &RNode{}, &RNode{}, &RNode{}
 	// all filters successful
 	v, err := r0.Pipe(
 		filter{fn: func(object *RNode) (*RNode, error) {
@@ -1281,6 +1286,7 @@ metadata:
 }
 
 func assertNoError(t *testing.T) func(o *RNode, err error) *RNode {
+	t.Helper()
 	return func(o *RNode, err error) *RNode {
 		assert.NoError(t, err)
 		return o
@@ -1288,6 +1294,7 @@ func assertNoError(t *testing.T) func(o *RNode, err error) *RNode {
 }
 
 func assertNoErrorString(t *testing.T) func(string, error) string {
+	t.Helper()
 	return func(s string, err error) string {
 		assert.NoError(t, err)
 		return s

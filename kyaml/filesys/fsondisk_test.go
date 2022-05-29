@@ -7,7 +7,6 @@
 package filesys
 
 import (
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -17,11 +16,9 @@ import (
 )
 
 func makeTestDir(t *testing.T) (FileSystem, string) {
+	t.Helper()
 	fSys := MakeFsOnDisk()
-	td, err := ioutil.TempDir("", "kustomize_testing_dir")
-	if err != nil {
-		t.Fatalf("unexpected error %s", err)
-	}
+	td := t.TempDir()
 	testDir, err := filepath.EvalSymlinks(td)
 	if err != nil {
 		t.Fatalf("unexpected error %s", err)
@@ -36,8 +33,7 @@ func makeTestDir(t *testing.T) (FileSystem, string) {
 }
 
 func TestCleanedAbs_1(t *testing.T) {
-	fSys, testDir := makeTestDir(t)
-	defer os.RemoveAll(testDir)
+	fSys, _ := makeTestDir(t)
 
 	d, f, err := fSys.CleanedAbs("")
 	if err != nil {
@@ -56,8 +52,7 @@ func TestCleanedAbs_1(t *testing.T) {
 }
 
 func TestCleanedAbs_2(t *testing.T) {
-	fSys, testDir := makeTestDir(t)
-	defer os.RemoveAll(testDir)
+	fSys, _ := makeTestDir(t)
 
 	d, f, err := fSys.CleanedAbs("/")
 	if err != nil {
@@ -73,7 +68,6 @@ func TestCleanedAbs_2(t *testing.T) {
 
 func TestCleanedAbs_3(t *testing.T) {
 	fSys, testDir := makeTestDir(t)
-	defer os.RemoveAll(testDir)
 
 	err := fSys.WriteFile(
 		filepath.Join(testDir, "foo"), []byte(`foo`))
@@ -95,7 +89,6 @@ func TestCleanedAbs_3(t *testing.T) {
 
 func TestCleanedAbs_4(t *testing.T) {
 	fSys, testDir := makeTestDir(t)
-	defer os.RemoveAll(testDir)
 
 	err := fSys.MkdirAll(filepath.Join(testDir, "d1", "d2"))
 	if err != nil {
@@ -135,7 +128,6 @@ func TestCleanedAbs_4(t *testing.T) {
 
 func TestReadFilesRealFS(t *testing.T) {
 	fSys, testDir := makeTestDir(t)
-	defer os.RemoveAll(testDir)
 
 	dir := path.Join(testDir, "dir")
 	nestedDir := path.Join(dir, "nestedDir")
@@ -194,8 +186,8 @@ func TestReadFilesRealFS(t *testing.T) {
 				"file-1.xtn",
 			},
 			expectedDirs: map[string][]string{
-				testDir: []string{dir},
-				dir:     []string{nestedDir},
+				testDir: {dir},
+				dir:     {nestedDir},
 			},
 		},
 		"AllHiddenFiles": {
@@ -206,7 +198,7 @@ func TestReadFilesRealFS(t *testing.T) {
 				".some-file-4.xtn",
 			},
 			expectedDirs: map[string][]string{
-				testDir: []string{hiddenDir},
+				testDir: {hiddenDir},
 			},
 		},
 		"foo_File": {

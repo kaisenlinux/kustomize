@@ -1,3 +1,6 @@
+// Copyright 2022 The Kubernetes Authors.
+// SPDX-License-Identifier: Apache-2.0
+
 package remove_test
 
 import (
@@ -43,6 +46,7 @@ type Case struct {
 // collection Name (e.g. transformers or resources) and newRemoveCmdToTest function.
 func ExecuteTestCases(t *testing.T, testCases []Case, collectionName string,
 	newRemoveCmdToTest func(filesys.FileSystem) *cobra.Command) {
+	t.Helper()
 	for _, tc := range testCases {
 		t.Run(tc.Description, func(t *testing.T) {
 			fSys := filesys.MakeFsInMemory()

@@ -39,12 +39,8 @@ func TestSubDirsWithFile(t *testing.T) {
 		},
 	}
 
-	dir, err := ioutil.TempDir("", "")
-	if !assert.NoError(t, err) {
-		t.FailNow()
-	}
-	defer os.RemoveAll(dir)
-	err = createTestDirStructure(dir)
+	dir := t.TempDir()
+	err := createTestDirStructure(dir)
 	if !assert.NoError(t, err) {
 		t.FailNow()
 	}
@@ -82,15 +78,15 @@ func createTestDirStructure(dir string) error {
 	if err != nil {
 		return err
 	}
-	err = ioutil.WriteFile(filepath.Join(dir, "subpkg1", "Krmfile"), []byte(""), 0777)
+	err = ioutil.WriteFile(filepath.Join(dir, "subpkg1", "Krmfile"), []byte(""), 0644)
 	if err != nil {
 		return err
 	}
-	err = ioutil.WriteFile(filepath.Join(dir, "subpkg2", "Krmfile"), []byte(""), 0777)
+	err = ioutil.WriteFile(filepath.Join(dir, "subpkg2", "Krmfile"), []byte(""), 0644)
 	if err != nil {
 		return err
 	}
-	err = ioutil.WriteFile(filepath.Join(dir, "Krmfile"), []byte(""), 0777)
+	err = ioutil.WriteFile(filepath.Join(dir, "Krmfile"), []byte(""), 0644)
 	if err != nil {
 		return err
 	}

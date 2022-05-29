@@ -1,3 +1,6 @@
+// Copyright 2022 The Kubernetes Authors.
+// SPDX-License-Identifier: Apache-2.0
+
 package refvar_test
 
 import (
@@ -17,7 +20,6 @@ var makeMf = func(theMap map[string]interface{}) MappingFunc {
 }
 
 func TestFilter(t *testing.T) {
-
 	testCases := map[string]struct {
 		input    string
 		expected string

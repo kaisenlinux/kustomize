@@ -342,7 +342,7 @@ metadata:
 		{name: "sort functions -- deepest first",
 			in: []f{
 				{
-					path: filepath.Join("a.yaml"),
+					path: "a.yaml",
 					value: `
 metadata:
   annotations:
@@ -382,7 +382,7 @@ metadata:
 `,
 				},
 				{
-					path: filepath.Join("b.yaml"),
+					path: "b.yaml",
 					value: `
 metadata:
   annotations:
@@ -412,7 +412,7 @@ metadata:
 `,
 				},
 				{
-					path: filepath.Join("b.yaml"),
+					path: "b.yaml",
 					value: `
 metadata:
   annotations:
@@ -442,7 +442,7 @@ metadata:
 `,
 				},
 				{
-					path: filepath.Join("b.yaml"),
+					path: "b.yaml",
 					value: `
 metadata:
   annotations:
@@ -473,7 +473,7 @@ metadata:
 `,
 				},
 				{
-					path: filepath.Join("b.yaml"),
+					path: "b.yaml",
 					value: `
 metadata:
   annotations:
@@ -502,7 +502,7 @@ metadata:
 `,
 				},
 				{
-					path: filepath.Join("b.yaml"),
+					path: "b.yaml",
 					value: `
 metadata:
   annotations:
@@ -543,7 +543,7 @@ metadata:
 `,
 				},
 				{
-					path: filepath.Join("b.yaml"),
+					path: "b.yaml",
 					value: `
 metadata:
   annotations:
@@ -648,7 +648,6 @@ metadata:
 		t.Run(tt.name, func(t *testing.T) {
 			// setup the test directory
 			d := setupTest(t)
-			defer os.RemoveAll(d)
 
 			// write the functions to files
 			var fnPaths []string
@@ -663,11 +662,7 @@ metadata:
 					// if out of package, write to a separate temp directory
 					if f.newFnPath || fnPath == "" {
 						// create a new fn directory
-						fnPath, err = ioutil.TempDir("", "kustomize-test")
-						if !assert.NoError(t, err) {
-							t.FailNow()
-						}
-						defer os.RemoveAll(fnPath)
+						fnPath = t.TempDir()
 						fnPaths = append(fnPaths, fnPath)
 					}
 					dir = fnPath
@@ -916,7 +911,6 @@ metadata:
 
 func TestCmd_Execute(t *testing.T) {
 	dir := setupTest(t)
-	defer os.RemoveAll(dir)
 
 	// write a test filter to the directory of configuration
 	if !assert.NoError(t, ioutil.WriteFile(
@@ -952,7 +946,6 @@ func (f *TestFilter) GetExit() error {
 
 func TestCmd_Execute_deferFailure(t *testing.T) {
 	dir := setupTest(t)
-	defer os.RemoveAll(dir)
 
 	// write a test filter to the directory of configuration
 	if !assert.NoError(t, ioutil.WriteFile(
@@ -1026,7 +1019,6 @@ replace: StatefulSet
 // TestCmd_Execute_setOutput tests the execution of a filter reading and writing to a dir
 func TestCmd_Execute_setFunctionPaths(t *testing.T) {
 	dir := setupTest(t)
-	defer os.RemoveAll(dir)
 
 	// write a test filter to a separate directory
 	tmpF, err := ioutil.TempFile("", "filter*.yaml")
@@ -1062,7 +1054,6 @@ func TestCmd_Execute_setFunctionPaths(t *testing.T) {
 // TestCmd_Execute_setOutput tests the execution of a filter using an io.Writer as output
 func TestCmd_Execute_setOutput(t *testing.T) {
 	dir := setupTest(t)
-	defer os.RemoveAll(dir)
 
 	// write a test filter
 	if !assert.NoError(t, ioutil.WriteFile(
@@ -1094,7 +1085,6 @@ func TestCmd_Execute_setOutput(t *testing.T) {
 // TestCmd_Execute_setInput tests the execution of a filter using an io.Reader as input
 func TestCmd_Execute_setInput(t *testing.T) {
 	dir := setupTest(t)
-	defer os.RemoveAll(dir)
 	if !assert.NoError(t, ioutil.WriteFile(
 		filepath.Join(dir, "filter.yaml"), []byte(ValueReplacerYAMLData), 0600)) {
 		return
@@ -1109,11 +1099,7 @@ func TestCmd_Execute_setInput(t *testing.T) {
 		t.FailNow()
 	}
 
-	outDir, err := ioutil.TempDir("", "kustomize-test")
-	defer os.RemoveAll(outDir)
-	if !assert.NoError(t, err) {
-		t.FailNow()
-	}
+	outDir := t.TempDir()
 
 	if !assert.NoError(t, ioutil.WriteFile(
 		filepath.Join(dir, "filter.yaml"), []byte(ValueReplacerYAMLData), 0600)) {
@@ -1142,7 +1128,6 @@ func TestCmd_Execute_setInput(t *testing.T) {
 // TestCmd_Execute_enableLogSteps tests the execution of a filter with LogSteps enabled.
 func TestCmd_Execute_enableLogSteps(t *testing.T) {
 	dir := setupTest(t)
-	defer os.RemoveAll(dir)
 
 	// write a test filter to the directory of configuration
 	if !assert.NoError(t, ioutil.WriteFile(
@@ -1170,6 +1155,7 @@ func TestCmd_Execute_enableLogSteps(t *testing.T) {
 }
 
 func getGeneratorFilterProvider(t *testing.T) func(runtimeutil.FunctionSpec, *yaml.RNode, currentUserFunc) (kio.Filter, error) {
+	t.Helper()
 	return func(f runtimeutil.FunctionSpec, node *yaml.RNode, currentUser currentUserFunc) (kio.Filter, error) {
 		return kio.FilterFunc(func(items []*yaml.RNode) ([]*yaml.RNode, error) {
 			if f.Container.Image == "generate" {
@@ -1238,10 +1224,8 @@ metadata:
 
 // setupTest initializes a temp test directory containing test data
 func setupTest(t *testing.T) string {
-	dir, err := ioutil.TempDir("", "kustomize-kyaml-test")
-	if !assert.NoError(t, err) {
-		t.FailNow()
-	}
+	t.Helper()
+	dir := t.TempDir()
 
 	_, filename, _, ok := runtime.Caller(0)
 	if !assert.True(t, ok) {
@@ -1254,9 +1238,23 @@ func setupTest(t *testing.T) string {
 	if !assert.NoError(t, copyutil.CopyDir(ds, dir)) {
 		t.FailNow()
 	}
+
+	cwd, err := os.Getwd()
+	if !assert.NoError(t, err) {
+		t.FailNow()
+	}
+
 	if !assert.NoError(t, os.Chdir(filepath.Dir(dir))) {
 		t.FailNow()
 	}
+
+	// Change back the current working directory when the test finishes
+	t.Cleanup(func() {
+		if !assert.NoError(t, os.Chdir(cwd)) {
+			t.FailNow()
+		}
+	})
+
 	return dir
 }
 
@@ -1264,6 +1262,7 @@ func setupTest(t *testing.T) string {
 // a filter to s/kind: Deployment/kind: StatefulSet/g.
 // this can be used to simulate running a filter.
 func getFilterProvider(t *testing.T) func(runtimeutil.FunctionSpec, *yaml.RNode, currentUserFunc) (kio.Filter, error) {
+	t.Helper()
 	return func(f runtimeutil.FunctionSpec, node *yaml.RNode, currentUser currentUserFunc) (kio.Filter, error) {
 		// parse the filter from the input
 		filter := yaml.YFilter{}

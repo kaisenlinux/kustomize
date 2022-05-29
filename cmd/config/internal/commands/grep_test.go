@@ -6,7 +6,6 @@ package commands_test
 import (
 	"bytes"
 	"io/ioutil"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -18,13 +17,9 @@ import (
 
 // TestGrepCommand_files verifies grep reads the files and filters them
 func TestGrepCommand_files(t *testing.T) {
-	d, err := ioutil.TempDir("", "kustomize-kyaml-test")
-	if !assert.NoError(t, err) {
-		return
-	}
-	defer os.RemoveAll(d)
+	d := t.TempDir()
 
-	err = ioutil.WriteFile(filepath.Join(d, "f1.yaml"), []byte(`
+	err := ioutil.WriteFile(filepath.Join(d, "f1.yaml"), []byte(`
 kind: Deployment
 metadata:
   labels:
@@ -400,28 +395,24 @@ spec:
 		test := tests[i]
 		t.Run(test.name, func(t *testing.T) {
 			sourceDir := filepath.Join("test", "testdata", test.dataset)
-			baseDir, err := ioutil.TempDir("", "")
-			if !assert.NoError(t, err) {
-				t.FailNow()
-			}
+			baseDir := t.TempDir()
 			copyutil.CopyDir(sourceDir, baseDir)
-			defer os.RemoveAll(baseDir)
 			runner := commands.GetGrepRunner("")
 			actual := &bytes.Buffer{}
 			runner.Command.SetOut(actual)
 			runner.Command.SetArgs(append(test.args, filepath.Join(baseDir, test.packagePath)))
-			err = runner.Command.Execute()
+			err := runner.Command.Execute()
 			if !assert.NoError(t, err) {
 				t.FailNow()
 			}
 
 			// normalize path format for windows
-			actualNormalized := strings.Replace(
-				strings.Replace(actual.String(), "\\", "/", -1),
-				"//", "/", -1)
+			actualNormalized := strings.ReplaceAll(
+				strings.ReplaceAll(actual.String(), "\\", "/"),
+				"//", "/")
 
-			expected := strings.Replace(test.expected, "${baseDir}", baseDir, -1)
-			expectedNormalized := strings.Replace(expected, "\\", "/", -1)
+			expected := strings.ReplaceAll(test.expected, "${baseDir}", baseDir)
+			expectedNormalized := strings.ReplaceAll(expected, "\\", "/")
 			if !assert.Equal(t, expectedNormalized, actualNormalized) {
 				t.FailNow()
 			}

@@ -7,24 +7,14 @@ MYGOBIN = $(shell go env GOPATH)/bin
 endif
 export PATH := $(MYGOBIN):$(PATH)
 
-.PHONY: generate license fix vet fmt test lint tidy clean
+include ../Makefile-tools.mk
 
-$(MYGOBIN)/addlicense:
-	go get github.com/google/addlicense
-
-# TODO: Issue #3663
-# Update this version of golangci-lint
-# Ideally use same version as in {REPO}/hack/go.mod
-$(MYGOBIN)/golangci-lint:
-	go get github.com/golangci/golangci-lint/cmd/golangci-lint@v1.17.0
+.PHONY: generate fix vet fmt test lint tidy clean
 
 $(MYGOBIN)/k8scopy:
 	( cd ../cmd/k8scopy; go install . )
 
-$(MYGOBIN)/stringer:
-	go get golang.org/x/tools/cmd/stringer
-
-all: license fix vet fmt test tidy
+all: generate fix vet fmt test lint tidy
 
 k8sGenDir := yaml/internal/k8sgen/pkg
 
@@ -36,14 +26,14 @@ clean:
 
 lint: $(MYGOBIN)/golangci-lint
 	$(MYGOBIN)/golangci-lint \
-	  run ./...
-
-
-license: $(MYGOBIN)/addlicense
-	( find . -type f -not -path "*/internal/forked/github.com/go-yaml*" -exec bash -c "$(MYGOBIN)/addlicense -y 2022 -c 'The Kubernetes Authors.' -f LICENSE_TEMPLATE {}" ";" )
+	  run ./... \
+	  --path-prefix=kyaml \
+	  -c ../.golangci.yml \
+	  --skip-dirs yaml/internal/k8sgen/pkg \
+	  --skip-dirs internal/forked
 
 test:
-	go test -cover ./...
+	go test -v -cover ./...
 
 fix:
 	go fix ./...
@@ -56,3 +46,6 @@ tidy:
 
 vet:
 	go vet $(shell go list ./... | grep -v "/kyaml/internal/forked/github.com/go-yaml/yaml")
+
+build:
+	go build -v ./...

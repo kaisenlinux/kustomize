@@ -6,7 +6,6 @@ package commands_test
 import (
 	"bytes"
 	"io/ioutil"
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -15,13 +14,9 @@ import (
 )
 
 func TestSourceCommand(t *testing.T) {
-	d, err := ioutil.TempDir("", "kustomize-source-test")
-	if !assert.NoError(t, err) {
-		return
-	}
-	defer os.RemoveAll(d)
+	d := t.TempDir()
 
-	err = ioutil.WriteFile(filepath.Join(d, "f1.yaml"), []byte(`
+	err := ioutil.WriteFile(filepath.Join(d, "f1.yaml"), []byte(`
 kind: Deployment
 metadata:
   labels:
@@ -144,13 +139,9 @@ items:
 }
 
 func TestSourceCommandJSON(t *testing.T) {
-	d, err := ioutil.TempDir("", "kustomize-source-test")
-	if !assert.NoError(t, err) {
-		return
-	}
-	defer os.RemoveAll(d)
+	d := t.TempDir()
 
-	err = ioutil.WriteFile(filepath.Join(d, "f1.json"), []byte(`
+	err := ioutil.WriteFile(filepath.Join(d, "f1.json"), []byte(`
 {
   "kind": "Deployment",
   "metadata": {
@@ -202,20 +193,28 @@ func TestSourceCommandJSON(t *testing.T) {
 	if !assert.Equal(t, `apiVersion: config.kubernetes.io/v1
 kind: ResourceList
 items:
-- {"kind": "Deployment", "metadata": {"labels": {"app": "nginx2"}, "name": "foo", "annotations": {"app": "nginx2", config.kubernetes.io/index: '0', config.kubernetes.io/path: 'f1.json', internal.config.kubernetes.io/index: '0', internal.config.kubernetes.io/path: 'f1.json'}}, "spec": {"replicas": 1}}
-- {"apiVersion": "v1", "kind": "Abstraction", "metadata": {"name": "foo", "annotations": {"config.kubernetes.io/function": "container:\n  image: gcr.io/example/reconciler:v1\n", "config.kubernetes.io/local-config": "true", config.kubernetes.io/index: '0', config.kubernetes.io/path: 'f2.json', internal.config.kubernetes.io/index: '0', internal.config.kubernetes.io/path: 'f2.json'}}, "spec": {"replicas": 3}}
+- {"kind": "Deployment", `+
+		`"metadata": {`+
+		`"labels": {"app": "nginx2"}, `+
+		`"name": "foo", `+
+		`"annotations": {`+
+		`"app": "nginx2", `+
+		`config.kubernetes.io/index: '0', config.kubernetes.io/path: 'f1.json', internal.config.kubernetes.io/index: '0', internal.config.kubernetes.io/path: 'f1.json'}}, `+
+		`"spec": {"replicas": 1}}
+- {"apiVersion": "v1", "kind": "Abstraction", `+
+		`"metadata": {`+
+		`"name": "foo", `+
+		`"annotations": {`+
+		`"config.kubernetes.io/function": "container:\n  image: gcr.io/example/reconciler:v1\n", `+
+		`"config.kubernetes.io/local-config": "true", `+
+		`config.kubernetes.io/index: '0', config.kubernetes.io/path: 'f2.json', internal.config.kubernetes.io/index: '0', internal.config.kubernetes.io/path: 'f2.json'}}, `+
+		`"spec": {"replicas": 3}}
 `, b.String()) {
 		return
 	}
 }
 
 func TestSourceCommand_Stdin(t *testing.T) {
-	d, err := ioutil.TempDir("", "kustomize-source-test")
-	if !assert.NoError(t, err) {
-		return
-	}
-	defer os.RemoveAll(d)
-
 	in := bytes.NewBufferString(`
 kind: Deployment
 metadata:
@@ -276,12 +275,6 @@ items:
 }
 
 func TestSourceCommandJSON_Stdin(t *testing.T) {
-	d, err := ioutil.TempDir("", "kustomize-source-test")
-	if !assert.NoError(t, err) {
-		return
-	}
-	defer os.RemoveAll(d)
-
 	in := bytes.NewBufferString(`
 {
   "kind": "Deployment",
@@ -312,7 +305,14 @@ func TestSourceCommandJSON_Stdin(t *testing.T) {
 	if !assert.Equal(t, `apiVersion: config.kubernetes.io/v1
 kind: ResourceList
 items:
-- {"kind": "Deployment", "metadata": {"labels": {"app": "nginx2"}, "name": "foo", "annotations": {"app": "nginx2", config.kubernetes.io/index: '0', internal.config.kubernetes.io/index: '0'}}, "spec": {"replicas": 1}}
+- {"kind": "Deployment", `+
+		`"metadata": {`+
+		`"labels": {"app": "nginx2"}, `+
+		`"name": "foo", `+
+		`"annotations": {`+
+		`"app": "nginx2", `+
+		`config.kubernetes.io/index: '0', internal.config.kubernetes.io/index: '0'}}, `+
+		`"spec": {"replicas": 1}}
 `, out.String()) {
 		return
 	}

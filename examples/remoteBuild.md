@@ -1,11 +1,14 @@
 # remote targets
 
+## remote directories
+
 `kustomize build` can be run on a URL. Resources can also reference other
 kustomization directories via URLs too.
 
 The URL format is an HTTPS or SSH `git clone` URL with an optional directory and
-some query string parameters. The directory is specified by appending a `//`
-after the repo URL. The following query string parameters can also be specified:
+some query string parameters. Kustomize does not currently support ports in the
+URL. The directory is specified by appending a `//` after the repo URL. The
+following query string parameters can also be specified:
 
  * `ref` - a `git fetch`-able ref, typically a branch, tag, or full commit hash
    (short hashes are not supported)
@@ -23,6 +26,11 @@ SSH clones are also supported either with `git@github.com:owner/repo` or
 `ssh://git@github.com/owner/repo` URLs.
 
 `file:///` clones are not supported.
+
+## remote files
+Resources can reference remote files via their raw GitHub urls, such
+as `https://raw.githubusercontent.com/kubernetes-sigs/kustomize/8ea501347443c7760217f2c1817c5c60934cf6a5/examples/helloWorld/deployment.yaml`
+.
 
 # Examples
 

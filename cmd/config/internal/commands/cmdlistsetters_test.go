@@ -6,7 +6,6 @@ package commands_test
 import (
 	"bytes"
 	"io/ioutil"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -408,14 +407,9 @@ openAPI:
 			openapi.ResetOpenAPI()
 			defer openapi.ResetOpenAPI()
 
-			dir, err := ioutil.TempDir("", "")
-			if !assert.NoError(t, err) {
-				t.FailNow()
-			}
+			dir := t.TempDir()
 
-			defer os.RemoveAll(dir)
-
-			err = ioutil.WriteFile(filepath.Join(dir, "Krmfile"), []byte(test.openapi), 0600)
+			err := ioutil.WriteFile(filepath.Join(dir, "Krmfile"), []byte(test.openapi), 0600)
 			if !assert.NoError(t, err) {
 				t.FailNow()
 			}
@@ -523,7 +517,7 @@ test/testdata/dataset-with-setters/mysql/
 			}
 
 			// normalize path format for windows
-			actualNormalized := strings.Replace(actual.String(), "\\", "/", -1)
+			actualNormalized := strings.ReplaceAll(actual.String(), "\\", "/")
 
 			if !assert.Contains(t, strings.TrimSpace(actualNormalized), strings.TrimSpace(test.expected)) {
 				t.FailNow()

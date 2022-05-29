@@ -1168,7 +1168,6 @@ items:
 				assert.NotNil(t, err)
 				assert.Equal(t, tc.expectedErr.Error(), err.Error())
 			}
-
 		})
 	}
 }
@@ -2181,8 +2180,7 @@ func TestRoundTripJSON(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected MarshalJSON err: %v", err)
 	}
-	actual := string(data)
-	if actual != deploymentLittleJson {
+	if actual := string(data); actual != deploymentLittleJson {
 		t.Fatalf("expected %s, got %s", deploymentLittleJson, actual)
 	}
 }
@@ -2312,8 +2310,6 @@ func TestGetAnnotations(t *testing.T) {
 }
 
 func TestGetFieldValueWithDot(t *testing.T) {
-	t.Skip()
-
 	const input = `
 kind: Pod
 metadata:
@@ -2332,8 +2328,6 @@ metadata:
 	require.NoError(t, err)
 	require.Equal(t, "hello-world-app", app)
 
-	// TODO: doesn't currently work; we expect to be able to escape the dot in future
-	// https://github.com/kubernetes-sigs/kustomize/issues/4487
 	fooAppName, err := labelRNode.GetFieldValue(`foo\.appname`)
 	require.NoError(t, err)
 	require.Equal(t, "hello-world-foo", fooAppName) // no field named 'foo.appname'
