@@ -7,6 +7,9 @@ MYGOBIN = $(shell go env GOPATH)/bin
 endif
 export PATH := $(MYGOBIN):$(PATH)
 
+# determines whether to run tests that only behave locally; can be overridden by override variable
+export IS_LOCAL = false
+
 .PHONY: install-out-of-tree-tools
 install-out-of-tree-tools: \
 	$(MYGOBIN)/goimports \
@@ -25,7 +28,7 @@ uninstall-out-of-tree-tools:
 	rm -f $(MYGOBIN)/stringer
 
 $(MYGOBIN)/golangci-lint:
-	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.45.2
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.46.2
 
 $(MYGOBIN)/mdrip:
 	go install github.com/monopole/mdrip@v1.0.2
