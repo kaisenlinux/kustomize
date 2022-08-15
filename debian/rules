@@ -20,3 +20,7 @@ override_dh_auto_test:
 
 override_dh_auto_install:
 	dh_auto_install -- --no-source
+	rm $(CURDIR)/debian/kustomize/usr/bin/goimports
+	rm $(CURDIR)/debian/kustomize/usr/bin/helmV3
+	rm $(CURDIR)/debian/kustomize/usr/bin/kubeval
+	rm $(CURDIR)/debian/kustomize/usr/bin/pluginator
