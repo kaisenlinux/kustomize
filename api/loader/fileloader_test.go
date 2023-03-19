@@ -5,7 +5,8 @@ package loader
 
 import (
 	"bytes"
-	"io/ioutil"
+	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"path"
@@ -20,6 +21,40 @@ import (
 	"sigs.k8s.io/kustomize/api/konfig"
 	"sigs.k8s.io/kustomize/kyaml/filesys"
 )
+
+func TestIsRemoteFile(t *testing.T) {
+	cases := map[string]struct {
+		url   string
+		valid bool
+	}{
+		"https file": {
+			"https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/examples/helloWorld/configMap.yaml",
+			true,
+		},
+		"https dir": {
+			"https://github.com/kubernetes-sigs/kustomize//examples/helloWorld/",
+			true,
+		},
+		"no scheme": {
+			"github.com/kubernetes-sigs/kustomize//examples/helloWorld/",
+			false,
+		},
+		"ssh": {
+			"ssh://git@github.com/kubernetes-sigs/kustomize.git",
+			false,
+		},
+		"local": {
+			"pod.yaml",
+			false,
+		},
+	}
+	for name, test := range cases {
+		test := test
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, test.valid, IsRemoteFile(test.url))
+		})
+	}
+}
 
 type testData struct {
 	path            string
@@ -61,6 +96,8 @@ func TestLoaderLoad(t *testing.T) {
 	require := require.New(t)
 
 	l1 := makeLoader()
+	repo := l1.Repo()
+	require.Empty(repo)
 	require.Equal("/", l1.Root())
 
 	for _, x := range testCases {
@@ -73,6 +110,9 @@ func TestLoaderLoad(t *testing.T) {
 	}
 	l2, err := l1.New("foo/project")
 	require.NoError(err)
+
+	repo = l2.Repo()
+	require.Empty(repo)
 	require.Equal("/foo/project", l2.Root())
 
 	for _, x := range testCases {
@@ -322,6 +362,8 @@ whatever
 		repoSpec, fSys, nil,
 		git.DoNothingCloner(filesys.ConfirmedDir(coRoot)))
 	require.NoError(err)
+	repo := l.Repo()
+	require.Equal(coRoot, repo)
 	require.Equal(coRoot+"/"+pathInRepo, l.Root())
 
 	_, err = l.New(url)
@@ -335,6 +377,9 @@ whatever
 	url = rootURL + "/" + pathInRepo
 	l2, err := l.New(url)
 	require.NoError(err)
+
+	repo = l2.Repo()
+	require.Equal(coRoot, repo)
 	require.Equal(coRoot+"/"+pathInRepo, l2.Root())
 }
 
@@ -389,6 +434,8 @@ func TestLoaderDisallowsLocalBaseFromRemoteOverlay(t *testing.T) {
 	// This is okay.
 	l2, err = l1.New("../base")
 	require.NoError(err)
+	repo := l2.Repo()
+	require.Empty(repo)
 	require.Equal(cloneRoot+"/foo/base", l2.Root())
 
 	// This is not okay.
@@ -396,6 +443,27 @@ func TestLoaderDisallowsLocalBaseFromRemoteOverlay(t *testing.T) {
 	require.Error(err)
 	require.Contains(err.Error(),
 		"base '/whatever/highBase' is outside '/whatever/someClone'")
+}
+
+func TestLoaderDisallowsRemoteBaseExitRepo(t *testing.T) {
+	fSys := filesys.MakeFsOnDisk()
+	dir, err := filesys.NewTmpConfirmedDir()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		_ = fSys.RemoveAll(dir.String())
+	})
+	repo := dir.Join("repo")
+	require.NoError(t, fSys.Mkdir(repo))
+
+	base := filepath.Join(repo, "base")
+	require.NoError(t, os.Symlink(dir.String(), base))
+
+	repoSpec, err := git.NewRepoSpecFromURL("https://github.com/org/repo/base")
+	require.NoError(t, err)
+
+	_, err = newLoaderAtGitClone(repoSpec, fSys, nil, git.DoNothingCloner(filesys.ConfirmedDir(repo)))
+	require.Error(t, err)
+	require.Contains(t, err.Error(), fmt.Sprintf("%q refers to directory outside of repo %q", base, repo))
 }
 
 func TestLocalLoaderReferencingGitBase(t *testing.T) {
@@ -414,6 +482,8 @@ func TestLocalLoaderReferencingGitBase(t *testing.T) {
 
 	l2, err := l1.New("github.com/someOrg/someRepo/foo/base")
 	require.NoError(err)
+	repo := l2.Repo()
+	require.Equal(cloneRoot, repo)
 	require.Equal(cloneRoot+"/foo/base", l2.Root())
 }
 
@@ -518,7 +588,7 @@ func TestLoaderHTTP(t *testing.T) {
 			require.Equal(x.path, u)
 			return &http.Response{
 				StatusCode: 200,
-				Body:       ioutil.NopCloser(bytes.NewBufferString(x.expectedContent)),
+				Body:       io.NopCloser(bytes.NewBufferString(x.expectedContent)),
 				Header:     make(http.Header),
 			}
 		})

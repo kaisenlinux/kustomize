@@ -5,7 +5,7 @@ package main_test
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -473,7 +473,7 @@ func TestHelmChartInflationGeneratorWithIncludeCRDs(t *testing.T) {
 
 	// we store this data outside of the _test.go file as its sort of huge
 	// and has backticks, which makes string literals wonky
-	testData, err := ioutil.ReadFile("include_crds_testdata.txt")
+	testData, err := os.ReadFile("include_crds_testdata.txt")
 	if err != nil {
 		t.Error(fmt.Errorf("unable to read test data for includeCRDs: %w", err))
 	}
@@ -521,6 +521,34 @@ valuesInline:
   global:
     enabled: false
   tests:
+    enabled: false
+`)
+	th.AssertActualEqualsExpected(rm, "")
+}
+
+func TestHelmChartInflationGeneratorWithSkipHooks(t *testing.T) {
+	th := kusttest_test.MakeEnhancedHarnessWithTmpRoot(t).
+		PrepBuiltin("HelmChartInflationGenerator")
+	defer th.Reset()
+	if err := th.ErrIfNoHelm(); err != nil {
+		t.Skip("skipping: " + err.Error())
+	}
+
+	// we choose this helm chart as it has the ability to turn
+	// everything off, except CRDs.
+	rm := th.LoadAndRunGenerator(`
+apiVersion: builtin
+kind: HelmChartInflationGenerator
+metadata:
+  name: terraform
+name: terraform
+version: 1.0.0
+repo: https://helm.releases.hashicorp.com
+releaseName: terraforming-mars
+includeCRDs: false
+skipHooks: true
+valuesInline:
+  global:
     enabled: false
 `)
 	th.AssertActualEqualsExpected(rm, "")

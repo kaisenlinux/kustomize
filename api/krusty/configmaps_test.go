@@ -138,10 +138,10 @@ configMapGenerator:
 - name: json
   literals:
   - 'v2=[{"path": "var/druid/segment-cache"}]'
-  - >- 
-    druid_segmentCache_locations=[{"path": 
-    "var/druid/segment-cache", 
-    "maxSize": 32000000000, 
+  - >-
+    druid_segmentCache_locations=[{"path":
+    "var/druid/segment-cache",
+    "maxSize": 32000000000,
     "freeSpacePercent": 1.0}]
 secretGenerator:
 - name: bob
@@ -201,12 +201,12 @@ metadata:
 ---
 apiVersion: v1
 data:
-  druid_segmentCache_locations: '[{"path":  "var/druid/segment-cache",  "maxSize":
-    32000000000,  "freeSpacePercent": 1.0}]'
+  druid_segmentCache_locations: '[{"path": "var/druid/segment-cache", "maxSize": 32000000000,
+    "freeSpacePercent": 1.0}]'
   v2: '[{"path": "var/druid/segment-cache"}]'
 kind: ConfigMap
 metadata:
-  name: blah-json-5298bc8g99
+  name: blah-json-m8529t979f
 ---
 apiVersion: v1
 data:
@@ -228,7 +228,9 @@ type: Opaque
 `)
 }
 
-// TODO: These should be errors instead.
+// TODO: This should be an error instead. However, we can't strict unmarshal until we have a yaml
+// lib that support case-insensitive keys and anchors.
+// See https://github.com/kubernetes-sigs/kustomize/issues/5061
 func TestGeneratorRepeatsInKustomization(t *testing.T) {
 	th := kusttest_test.MakeHarness(t)
 	th.WriteK(".", `
@@ -553,8 +555,6 @@ metadata:
 func TestDataEndsWithQuotes(t *testing.T) {
 	th := kusttest_test.MakeHarness(t)
 	th.WriteK(".", `
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
 configMapGenerator:
   - name: test
     literals:

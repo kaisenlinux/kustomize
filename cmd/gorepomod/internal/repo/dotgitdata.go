@@ -45,8 +45,9 @@ func (dg *DotGitData) AbsPath() string {
 
 // NewDotGitDataFromPath wants the incoming path to hold dotGit
 // E.g.
-//   ~/gopath/src/sigs.k8s.io/kustomize
-//   ~/gopath/src/github.com/monopole/gorepomod
+//
+//	~/gopath/src/sigs.k8s.io/kustomize
+//	~/gopath/src/github.com/monopole/gorepomod
 func NewDotGitDataFromPath(path string) (*DotGitData, error) {
 	if !utils.DirExists(filepath.Join(path, dotGitFileName)) {
 		return nil, fmt.Errorf(

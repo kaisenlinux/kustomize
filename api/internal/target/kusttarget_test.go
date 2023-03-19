@@ -5,12 +5,15 @@ package target_test
 
 import (
 	"encoding/base64"
+	"fmt"
 	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/kustomize/api/ifc"
+	. "sigs.k8s.io/kustomize/api/internal/target"
+	"sigs.k8s.io/kustomize/api/loader"
 	"sigs.k8s.io/kustomize/api/provider"
 	"sigs.k8s.io/kustomize/api/resmap"
 	"sigs.k8s.io/kustomize/api/resource"
@@ -20,6 +23,44 @@ import (
 
 // KustTarget is primarily tested in the krusty package with
 // high level tests.
+
+func TestLoadKustFile(t *testing.T) {
+	for name, test := range map[string]struct {
+		fileNames            []string
+		kustFileName, errMsg string
+	}{
+		"missing": {
+			fileNames: []string{"kustomization"},
+			errMsg:    `unable to find one of 'kustomization.yaml', 'kustomization.yml' or 'Kustomization' in directory '/'`,
+		},
+		"multiple": {
+			fileNames: []string{"kustomization.yaml", "Kustomization"},
+			errMsg: `Found multiple kustomization files under: /
+`,
+		},
+		"valid": {
+			fileNames:    []string{"kustomization.yml", "kust"},
+			kustFileName: "kustomization.yml",
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			th := kusttest_test.MakeHarness(t)
+			fSys := th.GetFSys()
+			for _, file := range test.fileNames {
+				require.NoError(t, fSys.WriteFile(file, []byte(fmt.Sprintf("namePrefix: test-%s", file))))
+			}
+
+			content, fileName, err := LoadKustFile(loader.NewFileLoaderAtCwd(fSys))
+			if test.kustFileName != "" {
+				require.NoError(t, err)
+				require.Equal(t, fmt.Sprintf("namePrefix: test-%s", test.kustFileName), string(content))
+				require.Equal(t, test.kustFileName, fileName)
+			} else {
+				require.EqualError(t, err, test.errMsg)
+			}
+		})
+	}
+}
 
 func TestLoad(t *testing.T) {
 	th := kusttest_test.MakeHarness(t)
@@ -40,7 +81,7 @@ func TestLoad(t *testing.T) {
 			},
 		},
 		"nonsenseLatin": {
-			errContains: "error converting YAML to JSON",
+			errContains: "found a tab character that violates indentation",
 			content: `
 		Lorem ipsum dolor sit amet, consectetur
 		adipiscing elit, sed do eiusmod tempor
@@ -98,10 +139,7 @@ commonLabels:
 
 func TestMakeCustomizedResMap(t *testing.T) {
 	th := kusttest_test.MakeHarness(t)
-	th.WriteK("/whatever", `
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
-namePrefix: foo-
+	th.WriteK("/whatever", `namePrefix: foo-
 nameSuffix: -bar
 namespace: ns1
 commonLabels:
@@ -258,12 +296,106 @@ metadata:
 	assert.Equal(t, string(expYaml), string(actYaml))
 }
 
+func TestConfigurationsOverrideDefault(t *testing.T) {
+	th := kusttest_test.MakeHarness(t)
+	th.WriteK("/merge-config", `namePrefix: foo-
+nameSuffix: -bar
+namespace: ns1
+resources:
+  - deployment.yaml
+  - config.yaml
+  - secret.yaml
+configurations:
+  - name-prefix-rules.yaml
+  - name-suffix-rules.yaml
+`)
+	th.WriteF("/merge-config/name-prefix-rules.yaml", `
+namePrefix:
+- path: metadata/name
+  apiVersion: v1
+  kind: Deployment
+- path: metadata/name
+  apiVersion: v1
+  kind: Secret
+`)
+	th.WriteF("/merge-config/name-suffix-rules.yaml", `
+nameSuffix:
+- path: metadata/name
+  apiVersion: v1
+  kind: ConfigMap
+- path: metadata/name
+  apiVersion: v1
+  kind: Deployment
+`)
+	th.WriteF("/merge-config/deployment.yaml", `
+apiVersion: apps/v1
+metadata:
+  name: deployment1
+kind: Deployment
+`)
+	th.WriteF("/merge-config/config.yaml", `
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: config
+`)
+	th.WriteF("/merge-config/secret.yaml", `
+apiVersion: v1
+kind: Secret
+metadata:
+  name: secret
+`)
+
+	pvd := provider.NewDefaultDepProvider()
+	resFactory := pvd.GetResourceFactory()
+
+	resources := []*resource.Resource{
+		resFactory.FromMapWithName("deployment1", map[string]interface{}{
+			"apiVersion": "apps/v1",
+			"kind":       "Deployment",
+			"metadata": map[string]interface{}{
+				"name":      "foo-deployment1-bar",
+				"namespace": "ns1",
+			},
+		}), resFactory.FromMapWithName("config", map[string]interface{}{
+			"apiVersion": "v1",
+			"kind":       "ConfigMap",
+			"metadata": map[string]interface{}{
+				"name":      "config-bar",
+				"namespace": "ns1",
+			},
+		}), resFactory.FromMapWithName("secret", map[string]interface{}{
+			"apiVersion": "v1",
+			"kind":       "Secret",
+			"metadata": map[string]interface{}{
+				"name":      "foo-secret",
+				"namespace": "ns1",
+			},
+		}),
+	}
+
+	expected := resmap.New()
+	for _, r := range resources {
+		err := expected.Append(r)
+		require.NoError(t, err)
+	}
+	expected.RemoveBuildAnnotations()
+	expYaml, err := expected.AsYaml()
+	require.NoError(t, err)
+
+	kt := makeKustTargetWithRf(t, th.GetFSys(), "/merge-config", pvd)
+	require.NoError(t, kt.Load())
+	actual, err := kt.MakeCustomizedResMap()
+	require.NoError(t, err)
+	actual.RemoveBuildAnnotations()
+	actYaml, err := actual.AsYaml()
+	require.NoError(t, err)
+	require.Equal(t, string(expYaml), string(actYaml))
+}
+
 func TestDuplicateExternalGeneratorsForbidden(t *testing.T) {
 	th := kusttest_test.MakeHarness(t)
-	th.WriteK("/generator", `
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
-generators:
+	th.WriteK("/generator", `generators:
 - |-
   apiVersion: generators.example/v1
   kind: ManifestGenerator
@@ -296,10 +428,7 @@ generators:
 
 func TestDuplicateExternalTransformersForbidden(t *testing.T) {
 	th := kusttest_test.MakeHarness(t)
-	th.WriteK("/transformer", `
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
-transformers:
+	th.WriteK("/transformer", `transformers:
 - |-
   apiVersion: transformers.example.co/v1
   kind: ValueAnnotator

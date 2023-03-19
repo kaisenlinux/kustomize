@@ -14,11 +14,12 @@ import (
 	"sigs.k8s.io/kustomize/api/provider"
 	"sigs.k8s.io/kustomize/cmd/config/completion"
 	"sigs.k8s.io/kustomize/cmd/config/configcobra"
-	"sigs.k8s.io/kustomize/kustomize/v4/commands/build"
-	"sigs.k8s.io/kustomize/kustomize/v4/commands/create"
-	"sigs.k8s.io/kustomize/kustomize/v4/commands/edit"
-	"sigs.k8s.io/kustomize/kustomize/v4/commands/openapi"
-	"sigs.k8s.io/kustomize/kustomize/v4/commands/version"
+	"sigs.k8s.io/kustomize/kustomize/v5/commands/build"
+	"sigs.k8s.io/kustomize/kustomize/v5/commands/create"
+	"sigs.k8s.io/kustomize/kustomize/v5/commands/edit"
+	"sigs.k8s.io/kustomize/kustomize/v5/commands/localize"
+	"sigs.k8s.io/kustomize/kustomize/v5/commands/openapi"
+	"sigs.k8s.io/kustomize/kustomize/v5/commands/version"
 	"sigs.k8s.io/kustomize/kyaml/filesys"
 )
 
@@ -53,6 +54,7 @@ See https://sigs.k8s.io/kustomize
 		create.NewCmdCreate(fSys, pvd.GetResourceFactory()),
 		version.NewCmdVersion(stdOut),
 		openapi.NewCmdOpenAPI(stdOut),
+		localize.NewCmdLocalize(fSys),
 	)
 	configcobra.AddCommands(c, konfig.ProgramName)
 

@@ -6,7 +6,6 @@ package e2e
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -706,7 +705,7 @@ metadata:
 				t.Skip()
 			}
 
-			dir, err := ioutil.TempDir("", "kustomize-test-data-")
+			dir, err := os.MkdirTemp("", "kustomize-test-data-")
 			if !assert.NoError(t, err) {
 				t.FailNow()
 			}
@@ -715,12 +714,12 @@ metadata:
 
 			// write the input
 			for path, data := range tt.files(binDir) {
-				err := ioutil.WriteFile(path, []byte(data), 0600)
+				err := os.WriteFile(path, []byte(data), 0600)
 				testutil.AssertNoError(t, err)
 			}
 
 			args := append([]string{"fn", "run", "."}, tt.args(binDir)...)
-			cmd := exec.Command(filepath.Join(binDir, kyamlBin), args...) // nolint: gosec
+			cmd := exec.Command(filepath.Join(binDir, kyamlBin), args...) //nolint: gosec
 			cmd.Dir = dir
 			var stdErr, stdOut bytes.Buffer
 			cmd.Stdout = &stdOut
@@ -737,7 +736,7 @@ metadata:
 			testutil.AssertNoError(t, err, stdErr.String())
 
 			for path, data := range tt.expectedFiles(binDir) {
-				b, err := ioutil.ReadFile(path)
+				b, err := os.ReadFile(path)
 				testutil.AssertNoError(t, err, stdErr.String())
 
 				if !assert.Equal(t, strings.TrimSpace(data), strings.TrimSpace(string(b)), stdErr.String()) {
@@ -757,12 +756,12 @@ func build() string {
 	// only build the binaries once
 	buildOnce.Do(func() {
 		var err error
-		binDir, err = ioutil.TempDir("", "kustomize-test-")
+		binDir, err = os.MkdirTemp("", "kustomize-test-")
 		if err != nil {
 			panic(err)
 		}
 
-		build := exec.Command("go", "build", "-o", // nolint: gosec
+		build := exec.Command("go", "build", "-o", //nolint: gosec
 			filepath.Join(binDir, e2econtainerconfigBin))
 		build.Dir = "e2econtainerconfig"
 		build.Stdout = os.Stdout
@@ -774,7 +773,7 @@ func build() string {
 			panic(err)
 		}
 
-		build = exec.Command("go", "build", "-o", filepath.Join(binDir, kyamlBin)) // nolint: gosec
+		build = exec.Command("go", "build", "-o", filepath.Join(binDir, kyamlBin)) //nolint: gosec
 		build.Dir = filepath.Join("..", "..", "..", "kubectl-krm")
 		build.Stdout = os.Stdout
 		build.Stderr = os.Stderr

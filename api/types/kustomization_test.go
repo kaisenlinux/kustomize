@@ -16,6 +16,75 @@ func fixKustomizationPostUnmarshallingCheck(k, e *Kustomization) bool {
 		k.Bases == nil
 }
 
+func TestKustomization_CheckDeprecatedFields(t *testing.T) {
+	tests := []struct {
+		name string
+		k    Kustomization
+		want *[]string
+	}{
+		{
+			name: "using_bases",
+			k: Kustomization{
+				Bases: []string{"base"},
+			},
+			want: &[]string{deprecatedBaseWarningMessage},
+		},
+		{
+			name: "using_ImageTags",
+			k: Kustomization{
+				ImageTags: []Image{},
+			},
+			want: &[]string{deprecatedImageTagsWarningMessage},
+		},
+		{
+			name: "usingPatchesJson6902",
+			k: Kustomization{
+				PatchesJson6902: []Patch{},
+			},
+			want: &[]string{deprecatedPatchesJson6902Message},
+		},
+		{
+			name: "usingPatchesStrategicMerge",
+			k: Kustomization{
+				PatchesStrategicMerge: []PatchStrategicMerge{},
+			},
+			want: &[]string{deprecatedPatchesStrategicMergeMessage},
+		},
+		{
+			name: "usingVar",
+			k: Kustomization{
+				Vars: []Var{},
+			},
+			want: &[]string{deprecatedVarsMessage},
+		},
+		{
+			name: "usingAll",
+			k: Kustomization{
+				Bases:                 []string{"base"},
+				ImageTags:             []Image{},
+				PatchesJson6902:       []Patch{},
+				PatchesStrategicMerge: []PatchStrategicMerge{},
+				Vars:                  []Var{},
+			},
+			want: &[]string{
+				deprecatedBaseWarningMessage,
+				deprecatedImageTagsWarningMessage,
+				deprecatedPatchesJson6902Message,
+				deprecatedPatchesStrategicMergeMessage,
+				deprecatedVarsMessage,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			k := tt.k
+			if got := k.CheckDeprecatedFields(); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Kustomization.CheckDeprecatedFields() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestFixKustomizationPostUnmarshalling(t *testing.T) {
 	var k Kustomization
 	k.Bases = append(k.Bases, "foo")
@@ -28,7 +97,7 @@ func TestFixKustomizationPostUnmarshalling(t *testing.T) {
 	k.CommonLabels = map[string]string{
 		"foo": "bar",
 	}
-	k.FixKustomizationPostUnmarshalling()
+	k.FixKustomization()
 
 	expected := Kustomization{
 		TypeMeta: TypeMeta{
@@ -60,7 +129,7 @@ func TestFixKustomizationPostUnmarshalling_2(t *testing.T) {
 		},
 	}
 	k.Bases = append(k.Bases, "foo")
-	k.FixKustomizationPostUnmarshalling()
+	k.FixKustomization()
 
 	expected := Kustomization{
 		TypeMeta: TypeMeta{
@@ -209,7 +278,7 @@ unknown: foo`)
 	if err == nil {
 		t.Fatalf("expect an error")
 	}
-	expect := "json: unknown field \"unknown\""
+	expect := "invalid Kustomization: json: unknown field \"unknown\""
 	if err.Error() != expect {
 		t.Fatalf("expect %v but got: %v", expect, err.Error())
 	}

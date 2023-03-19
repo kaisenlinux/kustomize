@@ -8,10 +8,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/pkg/errors"
 	"sigs.k8s.io/kustomize/api/builtins"
 	"sigs.k8s.io/kustomize/api/resmap"
 	"sigs.k8s.io/kustomize/api/types"
+	"sigs.k8s.io/kustomize/kyaml/errors"
 	"sigs.k8s.io/yaml"
 )
 
@@ -21,9 +21,7 @@ type plugin struct {
 	t resmap.Transformer
 }
 
-//nolint: golint
-//noinspection GoUnusedGlobalVariable
-var KustomizePlugin plugin
+var KustomizePlugin plugin //nolint:gochecknoglobals
 
 func (p *plugin) makePrefixPluginConfig() ([]byte, error) {
 	var s struct {
@@ -41,13 +39,13 @@ func (p *plugin) Config(h *resmap.PluginHelpers, _ []byte) error {
 	// Ignore the incoming c, compute new config.
 	c, err := p.makePrefixPluginConfig()
 	if err != nil {
-		return errors.Wrapf(
+		return errors.WrapPrefixf(
 			err, "dateprefixer makeconfig")
 	}
 	prefixer := builtins.NewPrefixTransformerPlugin()
 	err = prefixer.Config(h, c)
 	if err != nil {
-		return errors.Wrapf(
+		return errors.WrapPrefixf(
 			err, "prefix configure")
 	}
 	p.t = prefixer
@@ -55,7 +53,9 @@ func (p *plugin) Config(h *resmap.PluginHelpers, _ []byte) error {
 }
 
 // Returns a constant, rather than
-//   time.Now().Format("2006-01-02")
+//
+//	time.Now().Format("2006-01-02")
+//
 // to make tests happy.
 // This is just an example.
 func getDate() string {

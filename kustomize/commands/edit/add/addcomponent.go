@@ -9,8 +9,8 @@ import (
 
 	"github.com/spf13/cobra"
 	"sigs.k8s.io/kustomize/api/loader"
-	"sigs.k8s.io/kustomize/kustomize/v4/commands/internal/kustfile"
-	"sigs.k8s.io/kustomize/kustomize/v4/commands/internal/util"
+	"sigs.k8s.io/kustomize/kustomize/v5/commands/internal/kustfile"
+	"sigs.k8s.io/kustomize/kustomize/v5/commands/internal/util"
 	"sigs.k8s.io/kustomize/kyaml/filesys"
 )
 
@@ -24,7 +24,7 @@ func newCmdAddComponent(fSys filesys.FileSystem) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "component",
-		Short: "Add the name of a file containing a component to the kustomization file.",
+		Short: "Add the name of a file containing a component to the kustomization file",
 		Example: `
 		add component {filepath}`,
 		RunE: func(cmd *cobra.Command, args []string) error {

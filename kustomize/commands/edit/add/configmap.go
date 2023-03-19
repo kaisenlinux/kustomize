@@ -8,7 +8,7 @@ import (
 	"sigs.k8s.io/kustomize/api/ifc"
 	"sigs.k8s.io/kustomize/api/resource"
 	"sigs.k8s.io/kustomize/api/types"
-	"sigs.k8s.io/kustomize/kustomize/v4/commands/internal/kustfile"
+	"sigs.k8s.io/kustomize/kustomize/v5/commands/internal/kustfile"
 	"sigs.k8s.io/kustomize/kyaml/filesys"
 )
 
@@ -20,7 +20,7 @@ func newCmdAddConfigMap(
 	var flags flagsAndArgs
 	cmd := &cobra.Command{
 		Use:   "configmap NAME [--behavior={create|merge|replace}] [--from-file=[key=]source] [--from-literal=key1=value1]",
-		Short: "Adds a configmap to the kustomization file.",
+		Short: "Adds a configmap to the kustomization file",
 		Long:  "",
 		Example: `
 	# Adds a configmap to the kustomization file (with a specified key)

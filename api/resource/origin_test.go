@@ -38,7 +38,7 @@ repo: https://github.com/kubernetes-sigs/kustomize
 	for _, test := range tests {
 		actual, err := test.in.Append(test.path).String()
 		assert.NoError(t, err)
-		assert.Equal(t, actual, test.expected)
+		assert.Equal(t, test.expected, actual)
 	}
 }
 

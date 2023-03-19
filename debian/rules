@@ -1,26 +1,25 @@
 #!/usr/bin/make -f
 
-export GOPATH=$(CURDIR)/obj-x86_64-linux-gnu
-export GOBIN=$(CURDIR)/obj-x86_64-linux-gnu/bin
+export GOPATH=$(CURDIR)/_build
+export GOBIN=$(CURDIR)/_build/bin
 export GO111MODULE=on
 
 %:
 	dh $@ --buildsystem=golang
 
+override_dh_auto_clean:
+	rm -rf $(CURDIR)/_build $(CURDIR)/obj-x86_64-linux-gnu
+
 override_dh_auto_build:
 	cp Makefile-modules.mk Makefile-plugins.mk Makefile-tools.mk api/
 	make kustomize
-	mkdir debian/bash-completion
-	obj-x86_64-linux-gnu/bin/kustomize completion bash > debian/bash-completion/kustomize
-	mkdir debian/zsh-completion
-	obj-x86_64-linux-gnu/bin/kustomize completion zsh > debian/zsh-completion/_kustomize
 
 override_dh_auto_test:
 	make test-unit-kustomize-plugins
 
+override_dh_dwz:
+
 override_dh_auto_install:
-	dh_auto_install -- --no-source
-	rm $(CURDIR)/debian/kustomize/usr/bin/goimports
-	rm $(CURDIR)/debian/kustomize/usr/bin/helmV3
-	rm $(CURDIR)/debian/kustomize/usr/bin/kubeval
-	rm $(CURDIR)/debian/kustomize/usr/bin/pluginator
+	install -p -m 0755 $(CURDIR)/_build/bin/kustomize $(CURDIR)/debian/kustomize/usr/bin
+	$(CURDIR)/_build/bin/kustomize completion bash > $(CURDIR)/debian/kustomize/usr/share/bash-completion/completions/kustomize
+	$(CURDIR)/_build/bin/kustomize completion zsh > $(CURDIR)/debian/kustomize/usr/share/zsh/vendor-completions/_kustomize

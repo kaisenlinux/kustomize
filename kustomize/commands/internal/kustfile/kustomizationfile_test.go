@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/kustomize/api/konfig"
 	"sigs.k8s.io/kustomize/api/types"
-	testutils_test "sigs.k8s.io/kustomize/kustomize/v4/commands/internal/testutils"
+	testutils_test "sigs.k8s.io/kustomize/kustomize/v5/commands/internal/testutils"
 	"sigs.k8s.io/kustomize/kyaml/filesys"
 )
 
@@ -46,7 +46,6 @@ func TestFieldOrder(t *testing.T) {
 		"Configurations",
 		"Generators",
 		"Transformers",
-		"Inventory",
 		"Components",
 		"OpenAPI",
 		"BuildMetadata",
@@ -82,7 +81,7 @@ func TestWriteAndRead(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Couldn't read kustomization file: %v\n", err)
 	}
-	kustomization.FixKustomizationPostUnmarshalling()
+	kustomization.FixKustomization()
 	if !reflect.DeepEqual(kustomization, content) {
 		t.Fatal("Read kustomization is different from written kustomization")
 	}
@@ -189,7 +188,7 @@ patchesStrategicMerge:
 func TestPreserveCommentsWithAdjust(t *testing.T) {
 	kustomizationContentWithComments := []byte(`
 
-    
+
 
 # Some comments
 # This is some comment we should preserve
@@ -225,7 +224,7 @@ generatorOptions:
 
 	expected := []byte(`
 
-    
+
 
 # Some comments
 # This is some comment we should preserve
@@ -257,42 +256,6 @@ patchesStrategicMerge:
 # generator options
 generatorOptions:
   disableNameSuffixHash: true
-`)
-	fSys := filesys.MakeFsInMemory()
-	testutils_test.WriteTestKustomizationWith(
-		fSys, kustomizationContentWithComments)
-	mf, err := NewKustomizationFile(fSys)
-	if err != nil {
-		t.Fatalf("Unexpected Error: %v", err)
-	}
-
-	kustomization, err := mf.Read()
-	if err != nil {
-		t.Fatalf("Unexpected Error: %v", err)
-	}
-	if err = mf.Write(kustomization); err != nil {
-		t.Fatalf("Unexpected Error: %v", err)
-	}
-	bytes, _ := fSys.ReadFile(mf.path)
-
-	if diff := cmp.Diff(expected, bytes); diff != "" {
-		t.Errorf("Mismatch (-expected, +actual):\n%s", diff)
-	}
-}
-
-func TestFixPatchesField(t *testing.T) {
-	kustomizationContentWithComments := []byte(`
-patches:
-- patch1.yaml
-- patch2.yaml
-`)
-
-	expected := []byte(`
-patchesStrategicMerge:
-- patch1.yaml
-- patch2.yaml
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
 `)
 	fSys := filesys.MakeFsInMemory()
 	testutils_test.WriteTestKustomizationWith(
@@ -362,7 +325,7 @@ kind: Kustomization
 func TestCommentsWithDocumentSeperatorAtBeginning(t *testing.T) {
 	kustomizationContentWithComments := []byte(`
 
-    
+
 # Some comments
 # This is some comment we should preserve
 # don't delete it
@@ -375,7 +338,7 @@ namespace: mynamespace
 
 	expected := []byte(`
 
-    
+
 # Some comments
 # This is some comment we should preserve
 # don't delete it
@@ -419,7 +382,7 @@ foo:
 	}
 
 	_, err = mf.Read()
-	if err == nil || err.Error() != "json: unknown field \"foo\"" {
+	if err == nil || err.Error() != "invalid Kustomization: json: unknown field \"foo\"" {
 		t.Fatalf("Expect an unknown field error but got: %v", err)
 	}
 }

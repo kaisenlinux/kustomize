@@ -8,10 +8,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/pkg/errors"
 	"sigs.k8s.io/kustomize/api/builtins"
 	"sigs.k8s.io/kustomize/api/resmap"
 	"sigs.k8s.io/kustomize/api/types"
+	"sigs.k8s.io/kustomize/kyaml/errors"
 	"sigs.k8s.io/yaml"
 )
 
@@ -22,9 +22,7 @@ type plugin struct {
 	t                resmap.Transformer
 }
 
-//nolint: golint
-//noinspection GoUnusedGlobalVariable
-var KustomizePlugin plugin
+var KustomizePlugin plugin //nolint:gochecknoglobals
 
 func (p *plugin) makePrefixPluginConfig(n string) ([]byte, error) {
 	var s struct {
@@ -50,7 +48,7 @@ func (p *plugin) Config(h *resmap.PluginHelpers, c []byte) error {
 	prefixer := builtins.NewPrefixTransformerPlugin()
 	err = prefixer.Config(h, c)
 	if err != nil {
-		return errors.Wrapf(
+		return errors.WrapPrefixf(
 			err, "stringprefixer configure")
 	}
 	p.t = prefixer

@@ -6,16 +6,17 @@ package krmfunction
 import (
 	"bufio"
 	"bytes"
+	"embed"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
-
-	"github.com/rakyll/statik/fs"
-	// load embedded func wrapper
-	_ "sigs.k8s.io/kustomize/cmd/pluginator/v2/internal/krmfunction/funcwrapper"
 )
+
+//go:embed funcwrappersrc/go.mod.src
+//go:embed funcwrappersrc/main.go
+var fs embed.FS
 
 // Converter is a converter to convert the
 // plugin file to KRM function
@@ -85,7 +86,7 @@ func (c *Converter) Convert() error {
 }
 
 func (c *Converter) getDockerfile() string {
-	return `FROM golang:1.18-stretch
+	return `FROM golang:1.19-bullseye
 ENV CGO_ENABLED=0
 WORKDIR /go/src/
 COPY . .
@@ -108,6 +109,7 @@ func (c *Converter) prepareWrapper(content string) string {
 		}
 		// assign to plugin variable
 		if strings.TrimSpace(line) == "var plugin resmap.Configurable" {
+			//nolint:dupword
 			line += `
 	// KustomizePlugin is a global variable defined in every plugin
 	plugin = &KustomizePlugin
@@ -121,16 +123,12 @@ func (c *Converter) prepareWrapper(content string) string {
 // readEmbeddedFile read the file from embedded files with filename
 // name. Return the file content if it's successful.
 func (c *Converter) readEmbeddedFile(name string) (string, error) {
-	statikFS, err := fs.New()
-	if err != nil {
-		return "", err
-	}
-	r, err := statikFS.Open("/" + name)
+	r, err := fs.Open("funcwrappersrc/" + name)
 	if err != nil {
 		return "", err
 	}
 	defer r.Close()
-	contents, err := ioutil.ReadAll(r)
+	contents, err := io.ReadAll(r)
 	if err != nil {
 		return "", err
 	}
@@ -139,7 +137,7 @@ func (c *Converter) readEmbeddedFile(name string) (string, error) {
 }
 
 func (c *Converter) readDiskFile(path string) (string, error) {
-	f, err := ioutil.ReadFile(path)
+	f, err := os.ReadFile(path)
 	if err != nil {
 		return "", err
 	}
@@ -159,7 +157,7 @@ func (c *Converter) mkDstDir() error {
 func (c *Converter) write(m map[string]string) error {
 	for k, v := range m {
 		p := filepath.Join(c.outputDir, k)
-		err := ioutil.WriteFile(p, []byte(v), 0644)
+		err := os.WriteFile(p, []byte(v), 0644)
 		if err != nil {
 			return err
 		}

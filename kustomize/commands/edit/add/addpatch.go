@@ -9,7 +9,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"sigs.k8s.io/kustomize/api/types"
-	"sigs.k8s.io/kustomize/kustomize/v4/commands/internal/kustfile"
+	"sigs.k8s.io/kustomize/kustomize/v5/commands/internal/kustfile"
 	"sigs.k8s.io/kustomize/kyaml/filesys"
 )
 
@@ -24,7 +24,7 @@ func newCmdAddPatch(fSys filesys.FileSystem) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "patch",
-		Short: "Add an item to patches field.",
+		Short: "Add an item to patches field",
 		Long: `This command will add an item to patches field in the kustomization file.
 Each item may:
 

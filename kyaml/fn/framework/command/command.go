@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -116,13 +115,13 @@ func Build(p framework.ResourceListProcessor, mode CLIMode, noPrintError bool) *
 // the function into a container image.
 // The gen command takes one argument: the directory where the Dockerfile will be created.
 //
-//		go run main.go gen DIR/
+//	go run main.go gen DIR/
 func AddGenerateDockerfile(cmd *cobra.Command) {
 	gen := &cobra.Command{
 		Use:  "gen [DIR]",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := ioutil.WriteFile(filepath.Join(args[0], "Dockerfile"), []byte(`FROM golang:1.18-alpine as builder
+			if err := os.WriteFile(filepath.Join(args[0], "Dockerfile"), []byte(`FROM golang:1.19-alpine as builder
 ENV CGO_ENABLED=0
 WORKDIR /go/src/
 COPY go.mod go.sum ./
@@ -143,7 +142,7 @@ ENTRYPOINT ["function"]
 }
 
 func functionConfigFromFile(file string) (*yaml.RNode, error) {
-	b, err := ioutil.ReadFile(file)
+	b, err := os.ReadFile(file)
 	if err != nil {
 		return nil, errors.WrapPrefixf(err, "unable to read configuration file %q", file)
 	}
@@ -161,7 +160,7 @@ type deferredFileReader struct {
 
 func (fr *deferredFileReader) Read(dest []byte) (int, error) {
 	if fr.srcReader == nil {
-		src, err := ioutil.ReadFile(fr.path)
+		src, err := os.ReadFile(fr.path)
 		if err != nil {
 			return 0, errors.WrapPrefixf(err, "unable to read input file %s", fr.path)
 		}
