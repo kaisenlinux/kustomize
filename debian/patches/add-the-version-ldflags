@@ -1,13 +1,13 @@
 Author: Kevin Chevreuil - Kaisen <kaisen@kaisenlinux.org>
 
---- kustomize-5.0.1.orig/Makefile
-+++ kustomize-5.0.1/Makefile
+--- kustomize-5.0.2.orig/Makefile
++++ kustomize-5.0.2/Makefile
 @@ -75,7 +75,7 @@ $(MYGOBIN)/pluginator:
  # Build from local source.
  $(MYGOBIN)/kustomize: build-kustomize-api
  	cd kustomize; \
 -	go install -ldflags "-X sigs.k8s.io/kustomize/api/provenance.buildDate=$(shell date -u +'%Y-%m-%dT%H:%M:%SZ')" \
-+	go install -ldflags "-X sigs.k8s.io/kustomize/api/provenance.buildDate=$(shell date -u +'%Y-%m-%dT%H:%M:%SZ') -X sigs.k8s.io/kustomize/api/provenance.version=5.0.1" \
++	go install -ldflags "-X sigs.k8s.io/kustomize/api/provenance.buildDate=$(shell date -u +'%Y-%m-%dT%H:%M:%SZ') -X sigs.k8s.io/kustomize/api/provenance.version=5.0.2" \
  	.
  
  kustomize: $(MYGOBIN)/kustomize
