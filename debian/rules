@@ -5,7 +5,7 @@ export GOBIN=$(CURDIR)/_build/bin
 export GO111MODULE=on
 
 %:
-	dh $@ --buildsystem=golang
+	dh $@ --buildsystem=golang --builddirectory=_build
 
 override_dh_auto_clean:
 	rm -rf $(CURDIR)/_build $(CURDIR)/obj-x86_64-linux-gnu

@@ -1,3 +1,10 @@
+kustomize (5.1.0-1kaisen) kaisen-packages; urgency=medium
+
+  * Import the 5.1.0 version
+  * Update the quilt patch
+
+ -- Kevin Chevreuil - Kaisen <kaisen@kaisenlinux.org>  Sun, 23 Jul 2023 01:38:06 +0100
+
 kustomize (5.0.2-1kaisen) kaisen-packages; urgency=medium
 
   * Import the 5.0.2 version
