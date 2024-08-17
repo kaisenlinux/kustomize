@@ -1,9 +1,12 @@
-go 1.20
+go 1.21
 
 use (
 	./api
 	./cmd/config
 	./cmd/config/internal/commands/e2e/e2econtainerconfig
+	./cmd/config/internal/commands/e2e/e2econtainerenvgenerator
+	./cmd/config/internal/commands/e2e/e2econtainermountbind
+	./cmd/config/internal/commands/e2e/e2econtainersimplegenerator
 	./cmd/depprobcheck
 	./cmd/gorepomod
 	./cmd/k8scopy
@@ -15,6 +18,7 @@ use (
 	./functions/examples/template-go-nginx/image
 	./functions/examples/validator-kubeval/image
 	./functions/examples/validator-resource-requests/image
+	./hack
 	./kustomize
 	./kyaml
 	./plugin/builtin/annotationstransformer

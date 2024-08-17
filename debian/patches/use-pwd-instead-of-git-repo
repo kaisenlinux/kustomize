@@ -1,0 +1,13 @@
+Author: Kevin Chevreuil - Kaisen <kaisen@kaisenlinux.org>
+
+--- kustomize-5.4.3.orig/Makefile-tools.mk
++++ kustomize-5.4.3/Makefile-tools.mk
+@@ -9,7 +9,7 @@ MYGOBIN = $(shell go env GOPATH)/bin
+ endif
+ export PATH := $(MYGOBIN):$(PATH)
+ 
+-REPO_ROOT=$(shell git rev-parse --show-toplevel)
++REPO_ROOT=$(shell pwd)
+ 
+ # determines whether to run tests that only behave locally; can be overridden by override variable
+ export IS_LOCAL = false

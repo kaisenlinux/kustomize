@@ -13,6 +13,7 @@
 [CNCF Code of Conduct]: https://github.com/cncf/foundation/blob/master/code-of-conduct.md
 [Kubernetes Community Membership]: https://github.com/kubernetes/community/blob/master/community-membership.md
 
+[Kustomize Architecture]: ARCHITECTURE.md
 [Contribution Guide]: https://kubectl.docs.kubernetes.io/contributing/kustomize/
 [MacOS Dev Guide]: https://kubectl.docs.kubernetes.io/contributing/kustomize/mac/
 [Windows Dev Guide]: https://kubectl.docs.kubernetes.io/contributing/kustomize/windows/
@@ -25,13 +26,113 @@ _As contributors and maintainers of this project, and in the interest of fosteri
 
 ## Getting Started
 
-Dev guides:
+### Forking Kustomize and Working Locally
+The Kustomize project uses a "Fork and Pull" workflow that is standard to GitHub. In git terms, your personal fork is referred to as the "origin" and the actual project's git repository is called "upstream". To keep your personal branch (origin) up to date with the project (upstream), it must be configured within your local working copy.
 
-- [Contribution Guide]
-- [MacOS Dev Guide]
-- [Windows Dev Guide]
+### Create a fork in GitHub
+1. Visit https://github.com/kubernetes-sigs/kustomize
+2. Click the `Fork` button on the top right
 
-General resources for contributors:
+### Clone the repository
+```bash
+# Clone your repository fork from the previous step
+git clone --recurse-submodules git@github.com:<your github username>/kustomize.git
+cd kustomize
+
+# Configure upstream
+git remote add upstream https://github.com/kubernetes-sigs/kustomize
+git remote set-url --push upstream no_push
+
+# Review git configuration
+git remote -v
+```
+
+### Create a working branch
+```bash
+# Fetch changes from upstream master
+cd kustomize
+git fetch upstream
+git checkout master
+git rebase upstream/master
+
+# Create your working branch
+git checkout -b myfeature
+```
+
+### Sync your working branch
+You will need to periodically fetch changes from the `upstream` repository to keep your working branch in sync.
+```bash
+cd kustomize
+git fetch upstream
+git checkout myfeature
+git rebase upstream/master
+```
+
+### Push to GitHub
+When your changes are ready for review, push your working branch to your fork on GitHub.
+```bash
+cd kustomize
+git push origin myfeature
+```
+
+### Pull Request Rules
+
+We are using [Conventional Commits v1.0.0](https://www.conventionalcommits.org/en/v1.0.0/) as the main guideline of making PR. This guideline serves to help contributor and maintainer to classify their changes, thus providing better insight on type of release will be covered on each Kustomize release cycle.
+
+1. Please add these keywords on your PR titles accordingly
+
+| Keyword  | Description | Example |
+| ------------- | ------------- | ------------- |
+| fix  | Patching or fixing bugs or improvements introduction from previous release. This type of change will mark a `PATCH` release.  | fix: fix null value when generating yaml |
+| feat  | New features. This change will mark a `MINOR` release. | feat: new transformer and generator for ACME API CRD. |
+| chore  | Minor improvement outside main code base  | chore: add exclusion for transformer test. |
+| ci | CI/CD related changes (e.g. github workflow, scripts, CI steps). | ci: remove blocking tests |
+| docs  | Changes related to documentation. | docs: add rules documentation for PR. |
+
+
+2. Add `BREAKING CHANGE:` on your commit message as footer to signify breaking changes. This will help maintainers identify `MAJOR` releases.
+  
+Example:
+
+```
+feat: change YAML parser from `yaml/v1` to `yaml/v2`
+
+BREAKING CHANGE: parse() function now works with 2 arguments.
+```
+
+### Create a Pull Request
+
+1. Visit your fork at `https://github.com/<user>/kustomize`
+2. Click the **Compare & Pull Request** button next to your `myfeature` branch.
+3. Check out the pull request [process](https://github.com/kubernetes/community/blob/master/contributors/guide/pull-requests.md) for more details and advice.
+
+If you ran `git push` in the previous step, GitHub will return a useful link to create a Pull Request.
+
+### Build Kustomize
+The [Kustomize Architecture] document describes the respository organization and the kustomize build process.
+```bash
+# For go version >= 1.13
+unset GOPATH
+unset GO111MODULES
+
+# Build kustomize binary and install in go bin path
+cd kustomize
+make kustomize
+
+# Run unit tests
+make test-unit-all
+
+# Run linter
+make lint
+
+# Test examples against HEAD
+make test-examples-kustomize-against-HEAD
+
+# Run your development version
+~/go/bin/kustomize version
+```
+
+### General resources for contributors
 
 - [Contributor License Agreement] - Kubernetes projects require that you sign a Contributor License Agreement (CLA) before we can accept your pull requests.
 - [Kubernetes Contributor Guide] - Main contributor documentation.
@@ -166,10 +267,8 @@ behavior, do your best to explain to the user why this is the case.
 - If it seems to be a genuine bug, you can /triage accept the issue. In addition, investigate if there are workarounds or
 alternative solutions for the user that they can try until the issue gets resolved.
 
-Administrative notes:
-
-- The [OWNERS file spec] is a useful resources in making changes.
-- Maintainers and admins must be added to the appropriate lists in both [Kustomize OWNERS_ALIASES] and [SIG-CLI Teams]. If this isn't done, the individual in question will lack either PR approval rights (Kustomize list) or the appropriate Github repository permissions (community list).
+The triage party for kustomize is here https://cli.triage.k8s.io/s/kustomize and can be a easy way to
+find issues that have not been triaged yet.
 
 ## Project/Product Managers
 
@@ -193,6 +292,11 @@ users are having, please bring it up in weekly stand-up.
 You will also be asked to help with roadmap planning, deprecation communication, prioritization,
 and doing research on kustomize usage when appropriate, though these responsibilities will occur less
 frequently.
+
+## Administrative notes:
+
+- The [OWNERS file spec] is a useful resources in making changes.
+- Maintainers and admins must be added to the appropriate lists in both [Kustomize OWNERS_ALIASES] and [SIG-CLI Teams]. If this isn't done, the individual in question will lack either PR approval rights (Kustomize list) or the appropriate Github repository permissions (community list).
 
 ## Contact Information
 

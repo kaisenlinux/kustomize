@@ -1,1 +1,2 @@
-add-the-version-ldflags
+static-version-number
+use-pwd-instead-of-git-repo
